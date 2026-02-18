@@ -8,7 +8,7 @@ export interface AIAnalysisResult {
         overall_score: number;
     };
     detected_points: Array<{
-        param: "erythema" | "spots" | "wrinkles" | "pores" | "texture";
+        param: "erythema" | "spots" | "wrinkles" | "pores" | "texture" | "undereye" | "dullness" | "dehydration" | "firmness" | "acne" | "blackheads";
         x: number;
         y: number;
         score: number; // 0-100

@@ -5,21 +5,22 @@ const apiKey = process.env.GEMINI_API_KEY;
 
 // ─── System Prompt ───
 const SYSTEM_PROMPT = `
-Você é uma IA dermatológica de elite, especializada em análise de pele "cosmetic-tech".
-Sua tarefa é analisar a imagem do paciente e retornar um JSON estrito para renderização no frontend.
+Você é uma IA dermatológica de elite. Sua tarefa é analisar a imagem facial para gerar dados que alimentarão um infográfico "Split-Screen" de alta tecnologia.
 
-# CRITÉRIOS DE ANÁLISE
-Analise a imagem procurando APENAS as 3 ou 4 preocupações mais proeminentes desta lista exata:
+# CRITÉRIOS DE ANÁLISE (Obrigatório)
+Analise a imagem e identifique APENAS as 3 ou 4 preocupações mais proeminentes desta lista exata:
 1. "Acne & Blemishes" (acne, espinhas)
-2. "Dark Spots & Pigmentation" (manchas, melasma)
+2. "Dark Spots & Pigmentation" (manchas, melasma, tom irregular)
 3. "Pores & Texture" (poros dilatados, textura irregular)
 4. "Wrinkles & Fine Lines" (rugas, linhas de expressão)
 5. "Under-eye Concerns" (olheiras, inchaço)
-6. "Redness & Inflammation" (eritema, rosácea)
-7. "Dehydration" (pele seca, barreira danificada)
-8. "Loss of Firmness" (flacidez)
+6. "Dullness & Lack of Radiance" (pele opaca, sem viço)
+7. "Redness & Inflammation" (eritema, rosácea)
+8. "Dehydration & Barrier Damage" (pele seca, descamação)
+9. "Loss of Firmness & Elasticity" (flacidez)
+10. "Blackheads & Scarring" (cravos, cicatrizes)
 
-# SISTEMA DE PONTUAÇÃO (Score 0-100)
+# SISTEMA DE PONTUAÇÃO (Score 0-100%)
 Para cada item detectado, atribua uma pontuação de severidade baseada na visibilidade visual:
 - 0-33%: Mild (Leve)
 - 34-66%: Moderate (Moderado)
@@ -29,20 +30,20 @@ Para cada item detectado, atribua uma pontuação de severidade baseada na visib
 Retorne APENAS um objeto JSON. Não use markdown.
 {
   "summary": {
-    "erythema_score": number, // mapear Redness (0-100)
-    "spots_score": number,    // mapear Dark Spots (0-100)
-    "wrinkles_score": number, // mapear Wrinkles (0-100)
-    "pores_score": number,    // mapear Pores (0-100)
-    "texture_score": number,  // mapear Texture (0-100)
-    "overall_score": number   // Média geral de saúde (0-100)
+    "erythema_score": number, // 0-100 (Redness)
+    "spots_score": number,    // 0-100 (Dark Spots)
+    "wrinkles_score": number, // 0-100 (Wrinkles)
+    "pores_score": number,    // 0-100 (Pores)
+    "texture_score": number,  // 0-100 (Texture)
+    "overall_score": number   // 0-100 (Skin Health)
   },
   "detected_points": [
     {
-      "param": "erythema" | "spots" | "wrinkles" | "pores" | "texture",
-      "x": number, // Posição X em porcentagem (0-100) da face onde o problema é mais visível
+      "param": "erythema" | "spots" | "wrinkles" | "pores" | "texture" | "undereye" | "dullness" | "dehydration" | "firmness" | "acne" | "blackheads",
+      "x": number, // Posição X em porcentagem (0-100) da face onde o problema é mais visível no lado ESQUERDO da imagem original
       "y": number, // Posição Y em porcentagem (0-100)
       "score": number, // Score específico deste ponto (0-100)
-      "label": "string", // Título curto ex: "Deep Wrinkle" ou "Hyperpigmentation"
+      "label": "string", // Título curto ex: "Deep Wrinkle", "Hyperpigmentation", "Active Acne"
       "severity_label": "Mild" | "Moderate" | "Significant"
     }
   ],
@@ -80,10 +81,10 @@ const schema: Schema = {
                     param: {
                         type: SchemaType.STRING,
                         format: "enum",
-                        enum: ["erythema", "spots", "wrinkles", "pores", "texture"],
+                        enum: ["erythema", "spots", "wrinkles", "pores", "texture", "undereye", "dullness", "dehydration", "firmness", "acne", "blackheads"],
                         description: "The parameter type being marked"
                     },
-                    x: { type: SchemaType.NUMBER, description: "Horizontal position percentage (0-100)" },
+                    x: { type: SchemaType.NUMBER, description: "Horizontal position percentage (0-100) da face onde o problema é mais visível no lado ESQUERDO da imagem original" },
                     y: { type: SchemaType.NUMBER, description: "Vertical position percentage (0-100)" },
                     score: { type: SchemaType.NUMBER, description: "Severity score at this specific point (0-100)" },
                     label: { type: SchemaType.STRING, description: "Short title describing the issue, e.g. Deep Wrinkle" },
