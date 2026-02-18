@@ -162,9 +162,8 @@ export default function Compare() {
 
   return (
     <div
-      className={`min-h-[100dvh] flex flex-col bg-background ${
-        isFullscreen ? "fixed inset-0 z-50" : ""
-      }`}
+      className={`min-h-[100dvh] flex flex-col bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""
+        }`}
     >
       {/* ─── Header ─── */}
       {!isFullscreen && (
@@ -254,11 +253,10 @@ export default function Compare() {
               {/* Before upload */}
               <div
                 onClick={() => beforeInputRef.current?.click()}
-                className={`flex-1 aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all active:scale-[0.98] overflow-hidden ${
-                  beforeImage
-                    ? "border-amber-500/40 p-0"
-                    : "border-border/60 bg-card/30 hover:border-amber-500/30"
-                }`}
+                className={`flex-1 aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all active:scale-[0.98] overflow-hidden ${beforeImage
+                  ? "border-amber-500/40 p-0"
+                  : "border-border/60 bg-card/30 hover:border-amber-500/30"
+                  }`}
               >
                 {beforeImage ? (
                   <img
@@ -286,11 +284,10 @@ export default function Compare() {
               {/* After upload */}
               <div
                 onClick={() => afterInputRef.current?.click()}
-                className={`flex-1 aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all active:scale-[0.98] overflow-hidden ${
-                  afterImage
-                    ? "border-emerald-500/40 p-0"
-                    : "border-border/60 bg-card/30 hover:border-emerald-500/30"
-                }`}
+                className={`flex-1 aspect-[3/4] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all active:scale-[0.98] overflow-hidden ${afterImage
+                  ? "border-emerald-500/40 p-0"
+                  : "border-border/60 bg-card/30 hover:border-emerald-500/30"
+                  }`}
               >
                 {afterImage ? (
                   <img
@@ -324,7 +321,6 @@ export default function Compare() {
               ref={beforeInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileUpload("before")}
               className="hidden"
             />
@@ -332,7 +328,6 @@ export default function Compare() {
               ref={afterInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileUpload("after")}
               className="hidden"
             />
@@ -596,11 +591,10 @@ export default function Compare() {
                     <button
                       key={mode}
                       onClick={() => setViewMode(mode)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                        viewMode === mode
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${viewMode === mode
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                        }`}
                     >
                       {icon}
                       {label}
@@ -641,7 +635,6 @@ export default function Compare() {
                   ref={beforeInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={handleFileUpload("before")}
                   className="hidden"
                 />
@@ -649,7 +642,6 @@ export default function Compare() {
                   ref={afterInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   onChange={handleFileUpload("after")}
                   className="hidden"
                 />

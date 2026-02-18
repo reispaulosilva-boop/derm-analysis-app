@@ -484,7 +484,6 @@ export default function Analysis() {
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -969,7 +968,6 @@ export default function Analysis() {
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleFileUpload}
           className="hidden"
         />
