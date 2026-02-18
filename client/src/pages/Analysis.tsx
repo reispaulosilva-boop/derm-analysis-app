@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Layers,
   Camera,
+  Download,
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
@@ -276,6 +277,7 @@ export default function Analysis() {
   // ─── AI Analysis State ───
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [aiDisclaimer, setAiDisclaimer] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // ─── File Upload ───
   const handleFileUpload = useCallback(
@@ -354,52 +356,88 @@ export default function Analysis() {
     }
   };
 
-  // ─── Save Analysis ───
-  const handleSave = async () => {
-    if (!image) return;
+  // --- FUNÇÃO: Toggle da IA (Curiosidade) ---
+  const toggleAIAnalysis = () => {
+    // Se já tiver marcadores, apenas alterna a visibilidade (efeito "aparece/desaparece")
+    if (markers.length > 0) {
+      setShowMarkers(!showMarkers);
+      return;
+    }
 
-    // Create a loading toast
-    const toastId = toast.loading("Salvando análise...");
+    // Se não tiver marcadores, chama a API
+    handleAiScan();
+  };
+
+  // --- FUNÇÃO: Salvar no Celular (Local) ---
+  const handleDownload = async (withOverlay: boolean) => {
+    if (!image) return;
+    setIsDownloading(true);
+    const toastId = toast.loading("Preparando imagem...");
 
     try {
-      // 1. Create a demo patient (in a real app, you'd select one)
-      const patientName = `Paciente ${new Date().toLocaleTimeString()}`;
-      const patient = await patientService.createPatient(patientName);
+      const imgElement = new Image();
+      imgElement.src = image;
+      imgElement.crossOrigin = "anonymous"; // Importante para evitar erros de CORS se a imagem vier de fora
 
-      // 2. Start consultation
-      const consultation = await consultationService.createConsultation(patient.id, "Análise rápida via SkinScope");
+      await new Promise((resolve) => {
+        imgElement.onload = resolve;
+      });
 
-      // 3. Convert Base64 image to File
-      const res = await fetch(image);
-      const blob = await res.blob();
-      const file = new File([blob], `analysis-${Date.now()}.jpg`, { type: "image/jpeg" });
+      // Cria um canvas temporário com as dimensões REAIS da imagem
+      const canvas = document.createElement("canvas");
+      canvas.width = imgElement.naturalWidth;
+      canvas.height = imgElement.naturalHeight;
+      const ctx = canvas.getContext("2d");
 
-      // 4. Upload Image
-      const uploadData = await consultationService.uploadAnalysisImage(file, `${patient.id}/${file.name}`);
-      const publicUrl = await consultationService.getPublicUrl(uploadData.path);
+      if (!ctx) throw new Error("Erro ao criar contexto de imagem");
 
-      // 5. Create Image Record
-      const imageRecord = await consultationService.createImageRecord(consultation.id, publicUrl);
+      // 1. Desenha a foto original
+      ctx.drawImage(imgElement, 0, 0);
 
-      // 6. Save Results
-      await consultationService.saveAnalysisResults(
-        imageRecord.id,
-        markers,
-        paramSummary
-      );
+      // 2. Se o usuário quiser o overlay (análise), desenha os marcadores
+      if (withOverlay && markers.length > 0) {
+        markers.forEach((marker) => {
+          const x = (marker.x / 100) * canvas.width;
+          const y = (marker.y / 100) * canvas.height;
+          const paramInfo = ANALYSIS_PARAMS.find(p => p.id === marker.param);
+          const color = paramInfo?.color || "#ffffff";
 
-      // Generate recommendations if not already set by AI
-      if (recommendations.length === 0) {
-        setRecommendations(recommendationService.generateRecommendations(
-          Object.fromEntries(paramSummary.map(p => [p.id, p.avgScore]))
-        ));
+          // Círculo
+          ctx.beginPath();
+          ctx.arc(x, y, 15, 0, 2 * Math.PI); // Raio do marcador (ajuste se a imagem for muito grande)
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = color;
+          ctx.stroke();
+
+          // Ponto central
+          ctx.beginPath();
+          ctx.arc(x, y, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = color;
+          ctx.fill();
+
+          // Label (Opcional - Estilo Minimalista)
+          ctx.font = "bold 24px Arial";
+          ctx.fillStyle = color;
+          ctx.fillText(`${marker.score.toFixed(1)}`, x + 20, y + 10);
+        });
       }
 
-      toast.success("Análise salva com sucesso!", { id: toastId });
-      setShowRecommendations(true);
+      // 3. Converte para Link de Download
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      // Nome do arquivo com data
+      link.download = `SkinScope-${withOverlay ? 'Analise' : 'Foto'}-${new Date().getTime()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Foto salva na galeria!", { id: toastId });
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao salvar. Verifique se as credenciais do Supabase estão configuradas.", { id: toastId });
+      toast.error("Erro ao salvar imagem.", { id: toastId });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -1150,7 +1188,7 @@ export default function Analysis() {
                     </Button>
                     <Button
                       className={`touch-target rounded-xl font-medium bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all ${isAiScanning ? "animate-pulse" : ""}`}
-                      onClick={handleAiScan}
+                      onClick={toggleAIAnalysis}
                       disabled={isAiScanning}
                     >
                       {isAiScanning ? (
@@ -1172,14 +1210,37 @@ export default function Analysis() {
                     >
                       <Upload className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="touch-target rounded-xl"
-                      onClick={handleSave}
-                      title="Salvar Análise"
-                    >
-                      <Save className="w-4 h-4" />
-                    </Button>
+
+                    {/* Novo Botão de Download com Dropdown ou Lógica Simples */}
+                    {image && (
+                      <div className="flex gap-1">
+                        {/* Salvar Foto Pura */}
+                        <Button
+                          variant="outline"
+                          className="touch-target rounded-xl"
+                          onClick={() => handleDownload(false)}
+                          disabled={isDownloading}
+                          title="Salvar Foto Original"
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+
+                        {/* Salvar Foto com Análise (só aparece se tiver marcadores) */}
+                        {markers.length > 0 && (
+                          <Button
+                            variant="outline"
+                            className="touch-target rounded-xl border-primary/50 text-primary"
+                            onClick={() => handleDownload(true)}
+                            disabled={isDownloading}
+                            title="Salvar com Análise"
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            <span className="text-xs font-bold">AI</span>
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
                     {markers.length > 0 && (
                       <Button
                         className="touch-target rounded-xl bg-primary text-primary-foreground font-medium"
@@ -1191,7 +1252,7 @@ export default function Analysis() {
                         }}
                       >
                         <FileText className="w-4 h-4 mr-2" />
-                        Gerar Plano
+                        Plano
                       </Button>
                     )}
                   </div>
