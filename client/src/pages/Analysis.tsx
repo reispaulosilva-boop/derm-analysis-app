@@ -32,6 +32,8 @@ import { recommendationService, type Recommendation } from "@/services/recommend
 import { RecommendationModal } from "@/components/analysis/RecommendationModal";
 import { Save, FileText, Sparkles, Loader2, Info } from "lucide-react";
 import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisService";
+import { useFaceMesh } from "@/hooks/useFaceMesh";
+import FaceMeshOverlay from "@/components/analysis/FaceMeshOverlay";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -278,6 +280,35 @@ export default function Analysis() {
   const [isAiScanning, setIsAiScanning] = useState(false);
   const [aiDisclaimer, setAiDisclaimer] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // ─── Face Mesh Hook ───
+  const { detectFace, results: faceMeshResults } = useFaceMesh();
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
+
+  const handleImageLoad = useCallback(async () => {
+    if (imageRef.current) {
+      setImgDimensions({
+        width: imageRef.current.width,
+        height: imageRef.current.height,
+      });
+      await detectFace(imageRef.current);
+    }
+  }, [detectFace]);
+
+  // Update dimensions on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (imageRef.current) {
+        setImgDimensions({
+          width: imageRef.current.width,
+          height: imageRef.current.height,
+        });
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // ─── File Upload ───
   const handleFileUpload = useCallback(
@@ -768,11 +799,40 @@ export default function Analysis() {
                 }}
               >
                 <img
+                  ref={imageRef}
                   src={image}
                   alt="Foto do paciente"
                   className="max-w-full max-h-full object-contain select-none pointer-events-none"
                   draggable={false}
+                  onLoad={handleImageLoad}
+                  crossOrigin="anonymous"
                 />
+
+
+                {/* Face Mesh Overlay */}
+                {faceMeshResults && imgDimensions.width > 0 && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    {/* The overlay needs to match the image dimensions exactly. 
+                        Since the image is centered and object-contain, we need to position the overlay 
+                        to match the image's actual rendered position. 
+                        However, the FaceMeshOverlay expects width/height and renders an SVG.
+                        It basically acts as a layer on top. 
+                        If we put it in the same container as the img (centered flex), 
+                        and give it the same dimensions as the img, it should align. */}
+                    <div style={{ width: imgDimensions.width, height: imgDimensions.height, position: 'relative' }}>
+                      <FaceMeshOverlay
+                        results={faceMeshResults}
+                        width={imgDimensions.width}
+                        height={imgDimensions.height}
+                        pointsOfInterest={markers.map(m => ({
+                          x: (m.x / 100) * imgDimensions.width,
+                          y: (m.y / 100) * imgDimensions.height,
+                          label: '' // Optional: m.note
+                        }))}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Overlay heatmap effect */}
