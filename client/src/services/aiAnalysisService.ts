@@ -1,24 +1,23 @@
 export interface AIAnalysisResult {
     summary: {
-        erythema_score: number;
+        erythema_score: number; // 0-100
         spots_score: number;
         wrinkles_score: number;
         pores_score: number;
         texture_score: number;
-        overall_health_score: number;
+        overall_score: number;
     };
     detected_points: Array<{
         param: "erythema" | "spots" | "wrinkles" | "pores" | "texture";
         x: number;
         y: number;
-        score: number;
-        note: string;
+        score: number; // 0-100
+        label: string; // e.g. "Deep Wrinkle", "Hyperpigmentation"
+        severity_label: "Mild" | "Moderate" | "Significant";
     }>;
-    recommendations: Array<{
-        title: string;
-        description: string;
-        priority: "high" | "medium" | "low";
-        type: "product" | "procedure";
+    treatment_recommendations: Array<{
+        concern: string; // e.g. "For Dark Spots"
+        product: string; // e.g. "Vitamin C Serum Daily"
     }>;
 }
 
@@ -26,10 +25,9 @@ const API_Endpoint = "/api/analyze";
 
 // ─── Image Compression ───
 // Vercel Hobby plan has a 4.5MB request body limit.
-// A high-res photo as base64 easily exceeds this.
 // We resize and compress the image on a canvas before sending.
-const MAX_DIMENSION = 1024; // max width or height in px
-const JPEG_QUALITY = 0.7;   // JPEG compression quality
+const MAX_DIMENSION = 1024;
+const JPEG_QUALITY = 0.7;
 
 async function compressImageBase64(dataUrl: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -37,7 +35,6 @@ async function compressImageBase64(dataUrl: string): Promise<string> {
         img.onload = () => {
             let { width, height } = img;
 
-            // Scale down if needed
             if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
                 const scale = MAX_DIMENSION / Math.max(width, height);
                 width = Math.round(width * scale);
@@ -55,7 +52,6 @@ async function compressImageBase64(dataUrl: string): Promise<string> {
             }
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Convert to JPEG base64 with compression
             const compressed = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
             resolve(compressed);
         };
@@ -66,7 +62,6 @@ async function compressImageBase64(dataUrl: string): Promise<string> {
 
 export const aiAnalysisService = {
     async analyzeImage(imageBase64: string): Promise<AIAnalysisResult> {
-        // Compress image before sending to stay under Vercel's 4.5MB limit
         const compressedImage = await compressImageBase64(imageBase64);
 
         const response = await fetch(API_Endpoint, {

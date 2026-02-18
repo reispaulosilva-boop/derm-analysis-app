@@ -173,50 +173,31 @@ export default function Analysis() {
     try {
       const result = await aiAnalysisService.analyzeImage(image);
 
-      // 1. Map detected points to markers
+      // 1. Map detected points to markers (scale score from 0-100 → 0-10 for gauges)
       const newMarkers: Marker[] = result.detected_points.map(p => ({
         id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         x: p.x,
         y: p.y,
         param: p.param,
-        score: p.score,
-        note: p.note
+        score: Math.round(p.score / 10 * 10) / 10, // Convert 0-100 → 0-10, 1 decimal
+        note: `${p.label} (${p.severity_label})`
       }));
 
       setMarkers(current => [...current, ...newMarkers]);
-
-      // 2. Map summary to recommendations (if not provided by AI, or merge them)
-      // For now, we'll rely on the AI-provided recommendations if we want, 
-      // but the current UI uses recommendationService based on gauges.
-      // Let's stick to the requested behavior: "populate markers and update gauges"
-      // Gauges are derived from markers in this app's logic (see paramSummary below),
-      // so adding markers effectively updates the gauges.
-
-      // However, the user asked to "update gauges with success summary".
-      // In this component, paramSummary is derived *directly* from `markers` state.
-      // So if we just add markers, the gauges update automatically. 
-      // EXCEPT: The user requirement: "O backend deve retornar APENAS um JSON estrito... para que eu possa mapear diretamente NO MEU ESTADO 'markers' e 'paramSummary'"
-      // Since paramSummary is a derived value in this component (lines 356-367), we don't *set* it.
-      // As long as we populate markers, the gauges (ScoreGauge components) will reflect the average scores of those markers.
-      // If we want the AI's "overall" scores to override the calculated averages, we'd need to refactor `paramSummary`.
-
-      // But looking at `paramSummary` definition: it maps ANALYSIS_PARAMS and calculates avgScore from markers.
-      // So adding the markers IS the way to update the gauges in this architecture. Perfect.
 
       toast.success("Análise concluída!", { id: toastId });
       setAiDisclaimer(true);
       setShowMarkers(true);
 
-      // Optionally store AI recommendations for the modal
-      // We need to map AI recommendations to the app's Recommendation type
-      if (result.recommendations) {
-        const aiRecs: Recommendation[] = result.recommendations.map((r, i) => ({
+      // Map AI treatment recommendations to the app's Recommendation type
+      if (result.treatment_recommendations && result.treatment_recommendations.length > 0) {
+        const aiRecs: Recommendation[] = result.treatment_recommendations.map((r, i) => ({
           id: `ai-rec-${i}`,
-          type: r.type === 'procedure' || r.type === 'product' ? r.type : 'procedure', // Fallback
-          title: r.title,
-          description: r.description,
-          priority: r.priority,
-          tags: ["IA", r.type === "product" ? "Product" : "Procedure"]
+          type: 'product' as const,
+          title: r.concern,
+          description: r.product,
+          priority: 'medium' as const,
+          tags: ["IA", "Skincare"]
         }));
         setRecommendations(aiRecs);
       }
