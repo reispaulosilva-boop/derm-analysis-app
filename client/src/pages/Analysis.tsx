@@ -116,8 +116,8 @@ function ScoreGauge({
   );
 }
 
-// ─── Split Screen Comparison Component ───
-function SplitScreenComparison({
+// ─── Analysis Overlay Component (HUD Style) ───
+function AnalysisOverlay({
   image,
   markers,
   recommendations,
@@ -129,117 +129,128 @@ function SplitScreenComparison({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col font-sans text-white">
-      {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <span className="font-bold tracking-widest text-sm uppercase">AI Analysis</span>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm font-sans"
+    >
+      {/* ─── Scanning Effect ─── */}
+      <motion.div
+        initial={{ top: "0%" }}
+        animate={{ top: "100%" }}
+        transition={{ duration: 2.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 1 }}
+        className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_20px_rgba(34,211,238,0.8)] z-0 pointer-events-none opacity-50"
+      />
+
+      {/* ─── Header ─── */}
+      <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-400">
+            <Sparkles className="w-4 h-4" />
+            <span className="font-bold tracking-widest text-xs uppercase">AI DIAGNOSTICS</span>
+          </div>
+          <div className="h-px w-10 bg-cyan-500/30"></div>
+          <span className="text-xs text-white/50 font-mono">{markers.length} DETECTIONS</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full bg-white/10 hover:bg-white/20 text-white">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/10"
+        >
           <X className="w-5 h-5" />
         </Button>
       </div>
 
-      <div className="flex-1 flex relative">
-        {/* Left Side: Analysis */}
-        <div className="flex-1 relative overflow-hidden border-r border-white/20 bg-black">
-          <div className="absolute top-4 left-6 z-10">
-            <h3 className="text-xl font-bold uppercase tracking-wider">Analysis</h3>
-            <p className="text-xs text-white/60 font-mono mt-1">RAW DATA • {markers.length} POINTS DETECTED</p>
-          </div>
+      <div className="w-full h-full flex relative">
+        {/* ─── Center: Main Visualization (Transparent) ─── */}
+        <div className="flex-1 relative">
+          {/* Markers (HUD Style) */}
+          {markers.map((marker, i) => {
+            const param = ANALYSIS_PARAMS.find(p => p.id === marker.param)!;
+            const isRightSide = marker.x > 50;
 
-          {/* Image & Grid */}
-          <div className="w-full h-full relative">
-            <img src={image} className="w-full h-full object-cover opacity-80" alt="Analysis" />
-
-            {/* Tech Grid Overlay (Subtle) */}
-            <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none" style={{ mixBlendMode: 'overlay' }}>
-              <defs>
-                <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-
-            {/* Markers */}
-            {markers.map((marker) => {
-              const param = ANALYSIS_PARAMS.find(p => p.id === marker.param)!;
-              const severityLabel = marker.score < 34 ? "MILD" : marker.score < 67 ? "MODERATE" : "SIGNIFICANT";
-
-              return (
-                <div key={marker.id} className="absolute" style={{ left: `${marker.x}%`, top: `${marker.y}%` }}>
-                  {/* Dot */}
-                  <div className="w-1 h-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,1)] translate-x-[-50%] translate-y-[-50%]" />
-
-                  {/* Line & Label */}
-                  <div className="absolute top-0 left-0 flex items-center pointer-events-none">
-                    <div className="w-8 h-[1px] bg-white/60 origin-left -rotate-[30deg] translate-y-[-50%]" />
-                    <div className="absolute top-[-25px] left-[25px] flex flex-col items-start whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-0.5 border-l border-white/50">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-white">{param.label}</span>
-                        <span className="text-[10px] font-mono text-primary">{marker.score}%</span>
-                      </div>
-                      <span className="text-[8px] text-white/70 uppercase tracking-widest ml-2 mt-0.5">{severityLabel}</span>
-                    </div>
-                  </div>
+            return (
+              <motion.div
+                key={marker.id}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 + (i * 0.1) }}
+                className="absolute z-20"
+                style={{ left: `${marker.x}%`, top: `${marker.y}%` }}
+              >
+                {/* Target Reticle */}
+                <div className="relative w-8 h-8 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+                  <div className="absolute inset-0 border border-white/30 rounded-full animate-ping opacity-20" />
+                  <div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_10px_white]" />
+                  {/* Rotating brackets */}
+                  <div className="absolute inset-0 border-t border-b border-primary/50 rounded-full w-full h-full animate-spin-slow" />
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Connector Line & Label */}
+                <div className={`absolute top-0 ${isRightSide ? "right-8 flex-row-reverse" : "left-8"} flex items-center pointer-events-none w-[200px]`}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: 40 }}
+                    transition={{ delay: 0.8 + (i * 0.1), duration: 0.4 }}
+                    className={`h-[1px] bg-white/40 ${isRightSide ? "origin-right" : "origin-left"}`}
+                  />
+                  <div className={`h-[1px] w-4 bg-white/40 -rotate-45 ${isRightSide ? "origin-bottom-left" : "origin-top-left"}`} />
+
+                  <motion.div
+                    initial={{ opacity: 0, x: isRightSide ? 10 : -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 1.2 + (i * 0.1) }}
+                    className={`flex flex-col ${isRightSide ? "items-end text-right mr-2" : "items-start ml-2"}`}
+                  >
+                    <div className="bg-black/70 backdrop-blur-md border border-white/20 px-2 py-1 rounded shadow-lg">
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary block" style={{ color: param.color }}>{param.label}</span>
+                      <span className="text-[10px] font-mono text-white/80">{marker.score}% SEVERITY</span>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* Center Divider Line */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-white z-20 shadow-[0_0_15px_rgba(255,255,255,0.5)]"></div>
+        {/* ─── Right Panel: Recommendations (Floating Glass) ─── */}
+        <div className="w-80 h-full flex flex-col justify-center px-6 pointer-events-auto z-30">
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-white/70 border-b border-white/10 pb-2 mb-2">
+              Treatment Plan
+            </h3>
+            {recommendations.map((rec, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 1.5 + (i * 0.1) }}
+                className="group relative pl-4 border-l-2 border-primary/30 hover:border-primary transition-colors py-1"
+              >
+                <p className="text-[10px] uppercase tracking-wider text-primary/80 mb-0.5 font-bold">
+                  {rec.title}
+                </p>
+                <p className="text-xs text-white/90 leading-relaxed group-hover:text-white transition-colors">
+                  {rec.description}
+                </p>
+              </motion.div>
+            ))}
 
-        {/* Right Side: Results */}
-        <div className="flex-1 relative overflow-hidden bg-black">
-          <div className="absolute top-4 right-6 z-10 text-right">
-            <h3 className="text-xl font-bold uppercase tracking-wider text-primary">Projection</h3>
-            <p className="text-xs text-white/60 font-mono mt-1">OPTIMIZED • TREATMENT PLAN</p>
-          </div>
-
-          {/* Image (Improved) */}
-          <div className="w-full h-full relative">
-            <img
-              src={image}
-              className="w-full h-full object-cover"
-              style={{ filter: 'brightness(1.05) contrast(1.02) saturate(1.1) blur(0.5px)' }}
-              alt="After"
-            />
-
-            {/* Recommendations Overlay */}
-            <div className="absolute top-1/2 right-6 -translate-y-1/2 flex flex-col gap-6 items-end w-full max-w-[300px]">
-              {recommendations.slice(0, 4).map((rec, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + (i * 0.2) }}
-                  className="text-right"
-                >
-                  <p className="text-[10px] uppercase tracking-widest text-white/60 mb-1">
-                    {rec.title}
-                  </p>
-                  <div className="bg-black/40 backdrop-blur-md border border-white/10 px-4 py-2 rounded-l-lg border-r-4 border-r-primary">
-                    <p className="text-sm font-medium text-white shadow-black drop-shadow-md">
-                      {rec.description}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            <Button onClick={onClose} className="mt-4 w-full bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50">
+              Close Analysis
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ─── Main Component ───
 export default function Analysis() {
-  const [viewMode, setViewMode] = useState<'standard' | 'split'>('standard');
+  const [showOverlayAnalysis, setShowOverlayAnalysis] = useState(false);
   const [image, setImage] = useState<string | null>(null);
 
   const [markers, setMarkers] = useState<Marker[]>([]);
@@ -317,7 +328,7 @@ export default function Analysis() {
       toast.success("Análise concluída!", { id: toastId });
       setAiDisclaimer(true);
       setShowMarkers(true);
-      setViewMode('split'); // Switch to split view automatically
+      setShowOverlayAnalysis(true); // Open overlay automatically
 
       // Map AI treatment recommendations to the app's Recommendation type
       if (result.treatment_recommendations && result.treatment_recommendations.length > 0) {
@@ -555,22 +566,24 @@ export default function Analysis() {
     return { ...param, count: paramMarkers.length, avgScore };
   }).filter((p) => p.count > 0);
 
-  if (viewMode === 'split' && image) {
-    return (
-      <SplitScreenComparison
-        image={image}
-        markers={markers}
-        recommendations={recommendations}
-        onClose={() => setViewMode('standard')}
-      />
-    );
-  }
-
+  // Render Overlay if active
+  // Note: We render main component AND overlay
   return (
     <div
       className={`min-h-[100dvh] flex flex-col bg-background ${isFullscreen ? "fixed inset-0 z-50" : ""
         }`}
     >
+      <AnimatePresence>
+        {showOverlayAnalysis && image && (
+          <AnalysisOverlay
+            image={image}
+            markers={markers}
+            recommendations={recommendations}
+            onClose={() => setShowOverlayAnalysis(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ─── Header ─── */}
       {!isFullscreen && (
         <motion.header
@@ -619,6 +632,15 @@ export default function Analysis() {
                 ) : (
                   <EyeOff className="w-4 h-4" />
                 )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`touch-target rounded-xl ${showOverlayAnalysis ? "bg-primary/20 text-primary" : ""}`}
+                onClick={() => setShowOverlayAnalysis(!showOverlayAnalysis)}
+                title="Toggle AI Analysis Overlay"
+              >
+                <Sparkles className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost"
