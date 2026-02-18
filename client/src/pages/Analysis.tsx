@@ -67,7 +67,7 @@ function ScoreGauge({
 }) {
   const radius = (size - 8) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 10) * circumference;
+  const offset = circumference - (score / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -173,13 +173,13 @@ export default function Analysis() {
     try {
       const result = await aiAnalysisService.analyzeImage(image);
 
-      // 1. Map detected points to markers (scale score from 0-100 → 0-10 for gauges)
+      // 1. Map detected points to markers (keep 0-100 score)
       const newMarkers: Marker[] = result.detected_points.map(p => ({
         id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         x: p.x,
         y: p.y,
         param: p.param,
-        score: Math.round(p.score / 10 * 10) / 10, // Convert 0-100 → 0-10, 1 decimal
+        score: Math.round(p.score),
         note: `${p.label} (${p.severity_label})`
       }));
 
@@ -278,7 +278,7 @@ export default function Analysis() {
         x,
         y,
         param: activeParam,
-        score: 5,
+        score: 50,
         note: "",
       };
 
@@ -324,7 +324,7 @@ export default function Analysis() {
   const updateMarkerScore = useCallback((id: string, score: number) => {
     setMarkers((prev) =>
       prev.map((m) =>
-        m.id === id ? { ...m, score: Math.max(0, Math.min(10, score)) } : m
+        m.id === id ? { ...m, score: Math.max(0, Math.min(100, score)) } : m
       )
     );
   }, []);
@@ -418,10 +418,9 @@ export default function Analysis() {
     const avgScore =
       paramMarkers.length > 0
         ? Math.round(
-          (paramMarkers.reduce((sum, m) => sum + m.score, 0) /
-            paramMarkers.length) *
-          10
-        ) / 10
+          paramMarkers.reduce((sum, m) => sum + m.score, 0) /
+          paramMarkers.length
+        )
         : 0;
     return { ...param, count: paramMarkers.length, avgScore };
   }).filter((p) => p.count > 0);
@@ -580,7 +579,7 @@ export default function Analysis() {
                 <div className="absolute inset-0 pointer-events-none">
                   {markers.map((marker) => {
                     const param = getParamInfo(marker.param);
-                    const radius = 30 + marker.score * 5;
+                    const radius = 20 + marker.score * 0.5;
                     return (
                       <div
                         key={`overlay-${marker.id}`}
@@ -631,17 +630,18 @@ export default function Analysis() {
                 )}
               </AnimatePresence>
 
-              {/* Markers */}
+              {/* Markers — Tech Infographic Style */}
               {showMarkers &&
                 markers.map((marker) => {
                   const param = getParamInfo(marker.param);
                   const isSelected = selectedMarker === marker.id;
+                  const severityLabel = marker.score < 34 ? "MILD" : marker.score < 67 ? "MODERATE" : "SIGNIFICANT";
                   return (
                     <motion.div
                       key={marker.id}
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="absolute pointer-events-auto z-10"
+                      className="absolute pointer-events-auto z-10 group"
                       style={{
                         left: `${marker.x}%`,
                         top: `${marker.y}%`,
@@ -653,49 +653,42 @@ export default function Analysis() {
                         setSelectedMarker(isSelected ? null : marker.id);
                       }}
                     >
-                      {/* Pulse ring */}
+                      {/* Ponto Central Brilhante */}
                       <div
-                        className="absolute rounded-full marker-pulse"
+                        className="w-2.5 h-2.5 rounded-full"
                         style={{
-                          width: 36,
-                          height: 36,
-                          left: "50%",
-                          top: "50%",
-                          marginLeft: -18,
-                          marginTop: -18,
-                          backgroundColor: param.bgColor,
+                          backgroundColor: param.color,
+                          boxShadow: `0 0 10px ${param.color}, 0 0 20px ${param.color}80`,
                         }}
                       />
-                      {/* Marker dot */}
+
+                      {/* Linha fina conectora (efeito infográfico) */}
                       <div
-                        className={`relative w-7 h-7 rounded-full border-2 shadow-lg flex items-center justify-center text-[11px] font-bold text-white transition-all ${isSelected
-                          ? "border-white scale-125"
-                          : "border-white/70"
+                        className="absolute top-[5px] left-[5px] w-8 h-[1px] origin-left -rotate-45"
+                        style={{ backgroundColor: `${param.color}80` }}
+                      />
+
+                      {/* Label Flutuante — always visible when selected, hover otherwise */}
+                      <div
+                        className={`absolute top-[-30px] left-[25px] bg-black/70 backdrop-blur-md border-l-2 px-3 py-1.5 whitespace-nowrap transition-all duration-200 ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
                           }`}
-                        style={{ backgroundColor: param.color }}
+                        style={{ borderLeftColor: param.color }}
                       >
-                        {marker.score}
-                      </div>
-                      {/* Note indicator */}
-                      {marker.note && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary border border-background" />
-                      )}
-                      {/* Label on selection */}
-                      {isSelected && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap"
+                        <span
+                          className="font-bold block uppercase tracking-wider text-[10px]"
+                          style={{ color: param.color }}
                         >
-                          <div
-                            className="px-2 py-0.5 rounded-md text-[10px] font-medium text-white"
-                            style={{ backgroundColor: param.color + "CC" }}
-                          >
-                            {param.label}
-                            {marker.note ? ` · ${marker.note.slice(0, 20)}${marker.note.length > 20 ? "…" : ""}` : ""}
-                          </div>
-                        </motion.div>
-                      )}
+                          {param.label} • {marker.score}%
+                        </span>
+                        <span className="font-light text-[9px] text-gray-300">
+                          {severityLabel}
+                        </span>
+                        {marker.note && (
+                          <span className="block text-[9px] text-gray-400 mt-0.5 max-w-[150px] truncate">
+                            {marker.note}
+                          </span>
+                        )}
+                      </div>
                     </motion.div>
                   );
                 })}
@@ -853,7 +846,7 @@ export default function Analysis() {
                           <input
                             type="range"
                             min={0}
-                            max={10}
+                            max={100}
                             step={1}
                             value={selectedMarkerData.score}
                             onChange={(e) =>
