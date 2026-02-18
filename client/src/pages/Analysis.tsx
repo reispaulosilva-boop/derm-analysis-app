@@ -29,7 +29,8 @@ import { toast } from "sonner";
 import { consultationService, patientService } from "@/services/patientService";
 import { recommendationService, type Recommendation } from "@/services/recommendationService";
 import { RecommendationModal } from "@/components/analysis/RecommendationModal";
-import { Save, FileText } from "lucide-react";
+import { Save, FileText, Sparkles, Loader2, Info } from "lucide-react";
+import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisService";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -132,6 +133,10 @@ export default function Analysis() {
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
+  // ─── AI Analysis State ───
+  const [isAiScanning, setIsAiScanning] = useState(false);
+  const [aiDisclaimer, setAiDisclaimer] = useState(false);
+
   // ─── File Upload ───
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,6 +160,77 @@ export default function Analysis() {
     },
     []
   );
+
+  // ─── AI Analysis Handler ───
+  const handleAiScan = async () => {
+    if (!image) return;
+
+    setIsAiScanning(true);
+    const toastId = toast.loading("Analisando imagem com IA...", {
+      description: "Identificando eritema, manchas, rugas e textura..."
+    });
+
+    try {
+      const result = await aiAnalysisService.analyzeImage(image);
+
+      // 1. Map detected points to markers
+      const newMarkers: Marker[] = result.detected_points.map(p => ({
+        id: `ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        x: p.x,
+        y: p.y,
+        param: p.param,
+        score: p.score,
+        note: p.note
+      }));
+
+      setMarkers(current => [...current, ...newMarkers]);
+
+      // 2. Map summary to recommendations (if not provided by AI, or merge them)
+      // For now, we'll rely on the AI-provided recommendations if we want, 
+      // but the current UI uses recommendationService based on gauges.
+      // Let's stick to the requested behavior: "populate markers and update gauges"
+      // Gauges are derived from markers in this app's logic (see paramSummary below),
+      // so adding markers effectively updates the gauges.
+
+      // However, the user asked to "update gauges with success summary".
+      // In this component, paramSummary is derived *directly* from `markers` state.
+      // So if we just add markers, the gauges update automatically. 
+      // EXCEPT: The user requirement: "O backend deve retornar APENAS um JSON estrito... para que eu possa mapear diretamente NO MEU ESTADO 'markers' e 'paramSummary'"
+      // Since paramSummary is a derived value in this component (lines 356-367), we don't *set* it.
+      // As long as we populate markers, the gauges (ScoreGauge components) will reflect the average scores of those markers.
+      // If we want the AI's "overall" scores to override the calculated averages, we'd need to refactor `paramSummary`.
+
+      // But looking at `paramSummary` definition: it maps ANALYSIS_PARAMS and calculates avgScore from markers.
+      // So adding the markers IS the way to update the gauges in this architecture. Perfect.
+
+      toast.success("Análise concluída!", { id: toastId });
+      setAiDisclaimer(true);
+      setShowMarkers(true);
+
+      // Optionally store AI recommendations for the modal
+      // We need to map AI recommendations to the app's Recommendation type
+      if (result.recommendations) {
+        const aiRecs: Recommendation[] = result.recommendations.map((r, i) => ({
+          id: `ai-rec-${i}`,
+          type: r.type === 'procedure' || r.type === 'product' ? r.type : 'procedure', // Fallback
+          title: r.title,
+          description: r.description,
+          priority: r.priority,
+          tags: ["IA", r.type === "product" ? "Product" : "Procedure"]
+        }));
+        setRecommendations(aiRecs);
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Falha na análise via IA", {
+        id: toastId,
+        description: error instanceof Error ? error.message : "Tente novamente mais tarde."
+      });
+    } finally {
+      setIsAiScanning(false);
+    }
+  };
 
   // ─── Save Analysis ───
   const handleSave = async () => {
@@ -190,9 +266,12 @@ export default function Analysis() {
         paramSummary
       );
 
-      setRecommendations(recommendationService.generateRecommendations(
-        Object.fromEntries(paramSummary.map(p => [p.id, p.avgScore]))
-      ));
+      // Generate recommendations if not already set by AI
+      if (recommendations.length === 0) {
+        setRecommendations(recommendationService.generateRecommendations(
+          Object.fromEntries(paramSummary.map(p => [p.id, p.avgScore]))
+        ));
+      }
 
       toast.success("Análise salva com sucesso!", { id: toastId });
       setShowRecommendations(true);
@@ -539,6 +618,37 @@ export default function Analysis() {
                   })}
                 </div>
               )}
+
+              {/* AI Disclaimer Banner */}
+              <AnimatePresence>
+                {aiDisclaimer && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="absolute bottom-4 left-4 right-4 z-40 mx-auto max-w-md"
+                  >
+                    <div className="bg-blue-950/90 backdrop-blur-md border border-blue-500/30 p-3 rounded-xl flex items-start gap-3 shadow-xl">
+                      <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm text-blue-100 font-medium">Análise Assistida por IA</p>
+                        <p className="text-xs text-blue-200/80 mt-1">
+                          Os resultados são gerados automaticamente para fins estéticos e de triagem.
+                          NÃO substitui o diagnóstico médico profissional.
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-blue-300 hover:text-white -mr-1 -mt-1"
+                        onClick={() => setAiDisclaimer(false)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Markers */}
               {showMarkers &&
@@ -898,6 +1008,23 @@ export default function Analysis() {
                         <>
                           <Plus className="w-4 h-4 mr-2" />
                           Marcar
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      className={`touch-target rounded-xl font-medium bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all ${isAiScanning ? "animate-pulse" : ""}`}
+                      onClick={handleAiScan}
+                      disabled={isAiScanning}
+                    >
+                      {isAiScanning ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Analisando
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          AI Scan
                         </>
                       )}
                     </Button>
