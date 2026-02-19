@@ -657,14 +657,15 @@ export default function Analysis() {
         }`}
     >
       <AnimatePresence>
-        {showOverlayAnalysis && image && (
+        {/* Skin Analysis Overlay - Disabled for now */}
+        {/* {showOverlayAnalysis && image && (
           <AnalysisOverlay
             image={image}
             markers={markers}
             recommendations={recommendations}
             onClose={() => setShowOverlayAnalysis(false)}
           />
-        )}
+        )} */}
       </AnimatePresence>
 
       {/* ─── Header ─── */}
@@ -684,11 +685,11 @@ export default function Analysis() {
             </Button>
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold truncate">Análise de Pele</h1>
+            <h1 className="text-lg font-semibold truncate">Análise de Formato Facial</h1>
             <p className="text-xs text-muted-foreground truncate">
-              {markers.length > 0
-                ? `${markers.length} marcador${markers.length > 1 ? "es" : ""} · ${paramSummary.length} parâmetro${paramSummary.length > 1 ? "s" : ""}`
-                : "Carregue uma foto para começar"}
+              {faceShape
+                ? `Formato identificado: ${faceShape.shape}`
+                : "Carregue uma foto para análise geométrica"}
             </p>
           </div>
           {image && (
@@ -709,29 +710,14 @@ export default function Analysis() {
                 size="icon"
                 className="touch-target rounded-xl"
                 onClick={() => setShowMarkers(!showMarkers)}
+                title="Mostrar/Ocultar Marcadores"
               >
+                {/* Visual toggle for manual markers if any exist */}
                 {showMarkers ? (
                   <Eye className="w-4 h-4" />
                 ) : (
                   <EyeOff className="w-4 h-4" />
                 )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`touch-target rounded-xl ${showOverlayAnalysis ? "bg-primary/20 text-primary" : ""}`}
-                onClick={() => setShowOverlayAnalysis(!showOverlayAnalysis)}
-                title="Toggle AI Analysis Overlay"
-              >
-                <Sparkles className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="touch-target rounded-xl"
-                onClick={() => setIsFullscreen(true)}
-              >
-                <Maximize2 className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost"
@@ -745,12 +731,25 @@ export default function Analysis() {
                       description: faceShape.description,
                       duration: 5000,
                     });
+                  } else if (newState && !faceShape) {
+                    toast.loading("Detectando formato facial...", { duration: 2000 });
                   }
                 }}
-                title="Análise de Geometria Facial"
+                title="Avaliar Formato Facial"
               >
                 <ScanFace className="w-4 h-4" />
               </Button>
+              {/* Removed old AI Sparkles button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="touch-target rounded-xl"
+                onClick={() => setIsFullscreen(true)}
+              >
+                <Maximize2 className="w-4 h-4" />
+              </Button>
+              {/* Hidden Face Shape Toggle (Moved to Main 'Sparkles' Position) */}
+              {/* <ScanFace className="w-4 h-4" /> */}
             </div>
           )}
         </motion.header>
@@ -1227,139 +1226,57 @@ export default function Analysis() {
                   </div>
                 )}
 
-                {/* Parameter selector + actions */}
-                <div className="px-4 py-3">
-                  <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
-                    {ANALYSIS_PARAMS.map((param) => {
-                      const count = markers.filter(
-                        (m) => m.param === param.id
-                      ).length;
-                      return (
-                        <button
-                          key={param.id}
-                          onClick={() => setActiveParam(param.id)}
-                          className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border ${activeParam === param.id
-                            ? "border-white/15 text-white shadow-sm"
-                            : "border-transparent text-muted-foreground hover:text-foreground"
-                            }`}
-                          style={
-                            activeParam === param.id
-                              ? {
-                                backgroundColor: param.bgColor,
-                                borderColor: param.color + "30",
-                              }
-                              : {}
-                          }
-                        >
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: param.color }}
-                          />
-                          {param.label}
-                          {count > 0 && (
-                            <span
-                              className="ml-0.5 text-[10px] opacity-70"
-                            >
-                              ({count})
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                {/* ─── Skin Analysis & Parameters (Hidden) ─── */}
+                {/*
+                  We have hidden the parameter selector loop here.
+                  We also want to customize the action buttons below.
+                */}
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        setIsPlacing(!isPlacing);
-                        setSelectedMarker(null);
-                        setEditingNote(false);
-                      }}
-                      className={`flex-1 touch-target rounded-xl font-medium ${isPlacing
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        }`}
-                    >
-                      {isPlacing ? (
-                        <>
-                          <X className="w-4 h-4 mr-2" />
-                          Cancelar
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-2" />
-                          Marcar
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      className={`touch-target rounded-xl font-medium bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-500/30 shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all ${isAiScanning ? "animate-pulse" : ""}`}
-                      onClick={toggleAIAnalysis}
-                      disabled={isAiScanning}
-                    >
-                      {isAiScanning ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Analisando
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          AI Scan
-                        </>
-                      )}
-                    </Button>
+                <div className="px-4 py-3">
+                  {/* Actions Row */}
+                  <div className="flex gap-2 justify-center">
+                    {/* Upload Button */}
                     <Button
                       variant="outline"
-                      className="touch-target rounded-xl"
+                      className="touch-target rounded-xl flex-1"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <Upload className="w-4 h-4" />
+                      <Upload className="w-4 h-4 mr-2" />
+                      Carregar
                     </Button>
 
-                    {/* Novo Botão de Download com Dropdown ou Lógica Simples */}
+                    {/* Face Shape Analysis Button (Replaces AI Scan) */}
+                    <Button
+                      className={`touch-target rounded-xl font-medium flex-1 ${showFaceAnalysis
+                        ? "bg-cyan-600 hover:bg-cyan-700 text-white shadow-[0_0_15px_rgba(8,145,178,0.4)]"
+                        : "bg-primary text-primary-foreground"}`}
+                      onClick={() => {
+                        const newState = !showFaceAnalysis;
+                        setShowFaceAnalysis(newState);
+                        if (newState && faceShape) {
+                          toast.info(`Formato identificado: ${faceShape.shape}`, {
+                            description: faceShape.description,
+                            duration: 5000,
+                          });
+                        } else if (newState && !faceShape) {
+                          toast.loading("Detectando formato facial...", { duration: 2000 });
+                        }
+                      }}
+                    >
+                      <ScanFace className="w-4 h-4 mr-2" />
+                      {showFaceAnalysis ? "Ocultar Análise" : "Avaliar Face"}
+                    </Button>
+
+                    {/* Download Button */}
                     {image && (
-                      <div className="flex gap-1">
-                        {/* Salvar Foto Pura */}
-                        <Button
-                          variant="outline"
-                          className="touch-target rounded-xl"
-                          onClick={() => handleDownload(false)}
-                          disabled={isDownloading}
-                          title="Salvar Foto Original"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-
-                        {/* Salvar Foto com Análise (só aparece se tiver marcadores) */}
-                        {markers.length > 0 && (
-                          <Button
-                            variant="outline"
-                            className="touch-target rounded-xl border-primary/50 text-primary"
-                            onClick={() => handleDownload(true)}
-                            disabled={isDownloading}
-                            title="Salvar com Análise"
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            <span className="text-xs font-bold">AI</span>
-                          </Button>
-                        )}
-                      </div>
-                    )}
-
-                    {markers.length > 0 && (
                       <Button
-                        className="touch-target rounded-xl bg-primary text-primary-foreground font-medium"
-                        onClick={() => {
-                          setRecommendations(recommendationService.generateRecommendations(
-                            Object.fromEntries(paramSummary.map(p => [p.id, p.avgScore]))
-                          ));
-                          setShowRecommendations(true);
-                        }}
+                        variant="outline"
+                        className="touch-target rounded-xl"
+                        onClick={() => handleDownload(false)}
+                        disabled={isDownloading}
+                        title="Salvar Foto"
                       >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Plano
+                        <Download className="w-4 h-4" />
                       </Button>
                     )}
                   </div>
@@ -1374,8 +1291,8 @@ export default function Analysis() {
               recommendations={recommendations}
             />
 
-            {/* Fullscreen summary overlay */}
-            {isFullscreen && paramSummary.length > 0 && (
+            {/* Fullscreen summary overlay (Hidden) */}
+            {/* {isFullscreen && paramSummary.length > 0 && (
               <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60]">
                 <div className="flex gap-4 bg-black/70 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10">
                   {paramSummary.map((p) => (
@@ -1389,7 +1306,7 @@ export default function Analysis() {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
           </>
         )}
       </div>
