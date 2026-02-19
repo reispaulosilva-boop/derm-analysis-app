@@ -90,47 +90,50 @@ export function evaluateFaceShape(landmarks: NormalizedLandmark[]): FaceShapeAna
     const facialIndex = facialHeight / bizygomaticWidth; // > 1.35 approx is long/oval, ~1.0 is round/square
 
     // 4. Analyze Chin Shape (Heuristic)
-    // We check the angle or width at the chin.
-    // A narrow V shape has a smaller distance between adjacent chin points relative to height
-    // Or we can simple look at the 'severity' of the taper from gonion to menton.
-
-    // Let's use a simpler heuristic for 'Pointed' vs 'Flat'
-    // Measure width slightly above the chin (e.g. landmarks 377 and 148)
     const chinLeft = landmarks[LANDMARKS.CHIN_LEFT];
     const chinRight = landmarks[LANDMARKS.CHIN_RIGHT];
     const chinWidth = calculateDistance(chinLeft, chinRight);
-    // Normalize chin width by face width to determine "pointedness"
     const chinBroadness = chinWidth / bizygomaticWidth;
 
-    // 5. Classification Logic (Rule 2)
-    let shape: FaceShape = 'Oval';
-    let description = 'Rosto com proporções equilibradas e curvas suaves.';
+    // DEBUG: Log metrics for calibration
+    console.log(`[FaceAnalysis] CheekWidth (Bizygomatic): ${bizygomaticWidth.toFixed(4)}`);
+    console.log(`[FaceAnalysis] JawWidth (Bigonial): ${bigonialWidth.toFixed(4)}`);
+    console.log(`[FaceAnalysis] FaceHeight: ${facialHeight.toFixed(4)}`);
+    console.log(`[FaceAnalysis] WidthRatio (WR): ${widthRatio.toFixed(4)}`);
+    console.log(`[FaceAnalysis] FacialIndex (FI): ${facialIndex.toFixed(4)}`);
+    console.log(`[FaceAnalysis] ChinBroadness: ${chinBroadness.toFixed(4)}`);
 
-    // HEART (Coração)
-    // Bizigomática >> Bigonial
-    // Queixo estreito e pontiagudo
-    if (widthRatio > 1.45 && chinBroadness < 0.35) {
+    // 5. Classification Logic (Strict Hierarchy)
+    let shape: FaceShape = 'Oval';
+    let description = '';
+
+    // CASO 1: ROSTO CORAÇÃO (Heart Shape)
+    // "Distância bizigomática é maior que a bigonial... com estreitamento notável no queixo"
+    // WR > 1.35 indicates the cheekbones are significantly wider than the jaw.
+    // We add a check for chin broadness to ensure it's tapering.
+    if (widthRatio > 1.35 && chinBroadness < 0.38) {
         shape = 'Heart';
-        description = 'Largura bizigomática significativamente maior que a bigonial, com queixo proeminente e afilado.';
+        description = 'Largura bizigomática maior que a bigonial, com queixo proeminente e afilado (triângulo invertido).';
     }
-    // ROUND (Redondo)
-    // Facial Height ≈ Bizygomatic Width (Facial Index ~ 1.0 - 1.25)
-    // Jawline arredondada (implicit via logic: similar to square but distinct height ratio)
-    else if (facialIndex < 1.25 && widthRatio > 1.2) {
-        // widthRatio > 1.2 ensures it's not SQUARE (which has wide jaw)
+    // CASO 2: ROSTO ANGULAR (Square/Rectangular)
+    // "Linhas retas... distância bizigomática pode ser igual ou próxima à bigonial"
+    // WR < 1.15 implies the jaw width is very close to cheek width (within 15%).
+    // This captures strong square jaws.
+    else if (widthRatio < 1.15) {
+        shape = 'Angular';
+        description = 'Largura bigonial marcante, próxima à largura bizigomática. Linhas laterais retas e contorno forte.';
+    }
+    // CASO 3: ROSTO REDONDO (Round Shape)
+    // "Rosto largo no terço médio... altura visualmente próxima à largura"
+    // Short face (FI < 1.35) combined with a balanced but not square width ratio.
+    else if (facialIndex < 1.35) {
+        // Automatically falls into range 1.15 <= WR <= 1.35 due to previous checks
         shape = 'Round';
         description = 'Altura facial próxima à largura bizigomática, contornos suaves e sem ângulos marcados.';
     }
-    // ANGULAR (Quadrado/Retangular)
-    // Bigonial proeminente (widthRatio close to 1, e.g., < 1.25)
-    // Queixo mais reto/plano
-    else if (widthRatio < 1.25) {
-        shape = 'Angular';
-        description = 'Largura bigonial marcante, próxima à largura bizigomática. Linhas laterais retas e queixo mais plano.';
-    }
-    // OVAL (Default/Balanced)
-    // Bizygomatic > Bigonial but smooth transition
-    // Good height vs width proportion
+    // CASO 4: ROSTO OVAL (Oval Shape)
+    // "Proporções equilibradas... rosto mais longo que o redondo"
+    // Balanced width ratio (1.15 - 1.35) and longer face (FI >= 1.35).
     else {
         shape = 'Oval';
         description = 'Largura bizigomática maior que a bigonial com transição suave. Proporções verticais e horizontais equilibradas.';
@@ -142,12 +145,9 @@ export function evaluateFaceShape(landmarks: NormalizedLandmark[]): FaceShapeAna
             bizygomaticWidth,
             bigonialWidth,
             facialHeight,
-            chinShape: chinBroadness > 0.4 ? 'square' : chinBroadness > 0.2 ? 'rounded' : 'pointed',
-            midLowerRatio: widthRatio,
-            facialIndex,
-            // Note: widthRatio and chinBroadness are internal calculations,
-            // midLowerRatio and chinShape are the public interface metrics.
-            // chinCurvature: chinBroadness // Removed as chinShape is now the public metric
+            chinShape: chinBroadness > 0.4 ? 'square' : chinBroadness > 0.28 ? 'rounded' : 'pointed',
+            midLowerRatio: widthRatio, // Bizygomatic / Bigonial
+            facialIndex, // Facial Height / Bizygomatic Width
         },
         description
     };
