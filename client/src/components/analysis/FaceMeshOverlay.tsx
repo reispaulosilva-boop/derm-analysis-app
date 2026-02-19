@@ -17,7 +17,7 @@ interface FaceMeshOverlayProps {
 }
 
 // MediaPipe Face Mesh Face Oval indices
-const FACE_OVAL_INDICES = [
+export const FACE_OVAL_INDICES = [
     10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377,
     152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
 ];
@@ -25,7 +25,7 @@ const FACE_OVAL_INDICES = [
 /**
  * Catmull-Rom spline to SVG path conversion
  */
-function solveCatmullRom(data: { x: number, y: number }[], k: number = 1) {
+export function solveCatmullRom(data: { x: number, y: number }[], k: number = 1) {
     if (k == null) k = 1;
     const size = data.length;
     const last = size - 2;

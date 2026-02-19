@@ -50,8 +50,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisService";
 import { useFaceMesh } from "@/hooks/useFaceMesh";
-import FaceMeshOverlay from "@/components/analysis/FaceMeshOverlay";
-import { evaluateFaceShape, type FaceShapeAnalysis } from "@/utils/faceGeometry";
+import FaceMeshOverlay, { FACE_OVAL_INDICES, solveCatmullRom } from "@/components/analysis/FaceMeshOverlay";
+import { evaluateFaceShape, LANDMARKS, type FaceShapeAnalysis } from "@/utils/faceGeometry";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -438,7 +438,7 @@ export default function Analysis() {
     try {
       const imgElement = new Image();
       imgElement.src = image;
-      imgElement.crossOrigin = "anonymous"; // Importante para evitar erros de CORS se a imagem vier de fora
+      imgElement.crossOrigin = "anonymous";
 
       await new Promise((resolve) => {
         imgElement.onload = resolve;
@@ -455,42 +455,241 @@ export default function Analysis() {
       // 1. Desenha a foto original
       ctx.drawImage(imgElement, 0, 0);
 
-      // 2. Se o usuário quiser o overlay (análise), desenha os marcadores
-      if (withOverlay && markers.length > 0) {
-        markers.forEach((marker) => {
-          const x = (marker.x / 100) * canvas.width;
-          const y = (marker.y / 100) * canvas.height;
-          const paramInfo = ANALYSIS_PARAMS.find(p => p.id === marker.param);
-          const color = paramInfo?.color || "#ffffff";
+      // 2. Se o usuário quiser o overlay (análise), desenha tudo
+      if (withOverlay) {
 
-          // Círculo
-          ctx.beginPath();
-          ctx.arc(x, y, 15, 0, 2 * Math.PI); // Raio do marcador (ajuste se a imagem for muito grande)
+        // ─── 2a. Desenhar Face Mesh Overlay (se ativo e disponível) ───
+        if (showFaceAnalysis && faceMeshResults && faceMeshResults.faceLandmarks && faceMeshResults.faceLandmarks.length > 0) {
+          const landmarks = faceMeshResults.faceLandmarks[0];
+          const cw = canvas.width;
+          const ch = canvas.height;
+
+          // Helper to convert normalized landmarks to canvas pixels
+          const toX = (idx: number) => landmarks[idx].x * cw;
+          const toY = (idx: number) => landmarks[idx].y * ch;
+
+          // ── Face Oval (Catmull-Rom spline) ──
+          const ovalPoints = FACE_OVAL_INDICES.map(idx => ({
+            x: landmarks[idx].x * cw,
+            y: landmarks[idx].y * ch,
+          }));
+          const closedPoints = [...ovalPoints, ovalPoints[0], ovalPoints[1], ovalPoints[2]];
+          const pathStr = solveCatmullRom(closedPoints, 0.75);
+
+          // Parse SVG path string and draw on canvas
+          const path2d = new Path2D(pathStr);
+
+          // Glow layer
+          ctx.save();
+          ctx.strokeStyle = "#00ffff";
           ctx.lineWidth = 4;
-          ctx.strokeStyle = color;
-          ctx.stroke();
+          ctx.globalAlpha = 0.4;
+          ctx.shadowColor = "#00ffff";
+          ctx.shadowBlur = 12;
+          ctx.stroke(path2d);
+          ctx.restore();
 
-          // Ponto central
+          // Sharp line layer
+          ctx.save();
+          ctx.strokeStyle = "#00ffff";
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.8;
+          ctx.stroke(path2d);
+          ctx.restore();
+
+          // ── Helper: draw a dot ──
+          const drawDot = (x: number, y: number, color: string, radius: number = 6) => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = "white";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.restore();
+          };
+
+          // ── Helper: draw a measurement line ──
+          const drawLine = (x1: number, y1: number, x2: number, y2: number, color: string, dashed: boolean = false) => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 4;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 8;
+            if (dashed) ctx.setLineDash([10, 6]);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.restore();
+          };
+
+          // 1. Bizygomatic Width (Cyan)
+          const zyLx = toX(LANDMARKS.ZYGOMA_LEFT), zyLy = toY(LANDMARKS.ZYGOMA_LEFT);
+          const zyRx = toX(LANDMARKS.ZYGOMA_RIGHT), zyRy = toY(LANDMARKS.ZYGOMA_RIGHT);
+          drawLine(zyLx, zyLy, zyRx, zyRy, "#00ffff", true);
+          drawDot(zyLx, zyLy, "#00ffff");
+          drawDot(zyRx, zyRy, "#00ffff");
+
+          // 2. Bigonial Width (Magenta)
+          const goLx = toX(LANDMARKS.GONION_LEFT_ALT), goLy = toY(LANDMARKS.GONION_LEFT_ALT);
+          const goRx = toX(LANDMARKS.GONION_RIGHT_ALT), goRy = toY(LANDMARKS.GONION_RIGHT_ALT);
+          drawLine(goLx, goLy, goRx, goRy, "#ff00ff", true);
+          drawDot(goLx, goLy, "#ff00ff");
+          drawDot(goRx, goRy, "#ff00ff");
+
+          // 3. Facial Height (Amber)
+          const glX = toX(LANDMARKS.GLABELLA), glY = toY(LANDMARKS.GLABELLA);
+          const meX = toX(LANDMARKS.MENTON), meY = toY(LANDMARKS.MENTON);
+          drawLine(glX, glY, meX, meY, "#fbbf24", false);
+          drawDot(glX, glY, "#fbbf24");
+          drawDot(meX, meY, "#fbbf24");
+
+          // 4. Chin Shape Curve (Lime)
+          ctx.save();
           ctx.beginPath();
-          ctx.arc(x, y, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = color;
-          ctx.fill();
+          ctx.strokeStyle = "#a3e635";
+          ctx.lineWidth = 4;
+          ctx.globalAlpha = 0.8;
+          ctx.shadowColor = "#a3e635";
+          ctx.shadowBlur = 8;
+          ctx.moveTo(goRx, goRy);
+          ctx.quadraticCurveTo(meX, meY + (ch * 0.05), goLx, goLy);
+          ctx.stroke();
+          ctx.restore();
 
-          // Label (Opcional - Estilo Minimalista)
-          ctx.font = "bold 24px Arial";
-          ctx.fillStyle = color;
-          ctx.fillText(`${marker.score.toFixed(1)}`, x + 20, y + 10);
-        });
+          // ── 2b. Summary Card (Face Shape Result) ──
+          if (faceShape) {
+            const cardX = cw * 0.03;
+            const cardY = ch * 0.03;
+            const cardW = cw * 0.32;
+            const cardH = ch * 0.28;
+            const padding = cardW * 0.06;
+
+            // Card background
+            ctx.save();
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.beginPath();
+            const r = 16;
+            ctx.moveTo(cardX + r, cardY);
+            ctx.lineTo(cardX + cardW - r, cardY);
+            ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + r, r);
+            ctx.lineTo(cardX + cardW, cardY + cardH - r);
+            ctx.arcTo(cardX + cardW, cardY + cardH, cardX + cardW - r, cardY + cardH, r);
+            ctx.lineTo(cardX + r, cardY + cardH);
+            ctx.arcTo(cardX, cardY + cardH, cardX, cardY + cardH - r, r);
+            ctx.lineTo(cardX, cardY + r);
+            ctx.arcTo(cardX, cardY, cardX + r, cardY, r);
+            ctx.closePath();
+            ctx.fill();
+
+            // Card border
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 0;
+            ctx.stroke();
+            ctx.restore();
+
+            let yOffset = cardY + padding;
+            const fontSize = Math.max(14, cardW * 0.07);
+            const titleSize = Math.max(20, cardW * 0.12);
+
+            // "Resultado" label
+            ctx.save();
+            ctx.font = `600 ${fontSize * 0.85}px Arial, sans-serif`;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.fillText("RESULTADO", cardX + padding, yOffset + fontSize);
+            yOffset += fontSize + 6;
+
+            // Face shape name
+            ctx.font = `bold ${titleSize}px Arial, sans-serif`;
+            ctx.fillStyle = "white";
+            ctx.fillText(faceShape.shape, cardX + padding, yOffset + titleSize);
+            yOffset += titleSize + 12;
+
+            // Separator
+            ctx.beginPath();
+            ctx.moveTo(cardX + padding, yOffset);
+            ctx.lineTo(cardX + cardW - padding, yOffset);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            yOffset += 12;
+
+            // Metric bars
+            const metrics = [
+              { label: "Bizigomática", value: faceShape.metrics.bizygomaticWidth, color: "#22d3ee" },
+              { label: "Bigonial", value: faceShape.metrics.bigonialWidth, color: "#e879f9" },
+              { label: "Altura Facial", value: faceShape.metrics.facialHeight, color: "#fbbf24" },
+            ];
+
+            const barMax = cardW - padding * 2;
+            const barH = Math.max(4, cardH * 0.025);
+
+            metrics.forEach((m) => {
+              // Label and value
+              ctx.font = `500 ${fontSize * 0.7}px Arial, sans-serif`;
+              ctx.fillStyle = m.color;
+              ctx.fillText(m.label, cardX + padding, yOffset + fontSize * 0.7);
+              ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+              ctx.textAlign = "right";
+              ctx.fillText((m.value * 100).toFixed(1), cardX + cardW - padding, yOffset + fontSize * 0.7);
+              ctx.textAlign = "left";
+              yOffset += fontSize * 0.7 + 4;
+
+              // Background bar
+              ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+              ctx.fillRect(cardX + padding, yOffset, barMax, barH);
+
+              // Value bar
+              ctx.fillStyle = m.color;
+              ctx.fillRect(cardX + padding, yOffset, Math.min(m.value * 1.2, 1) * barMax, barH);
+              yOffset += barH + 10;
+            });
+
+            // Ratio line
+            ctx.font = `400 ${fontSize * 0.6}px Arial, sans-serif`;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.fillText("Proporção (Med/Inf)", cardX + padding, yOffset + fontSize * 0.6);
+            ctx.fillStyle = "white";
+            ctx.textAlign = "right";
+            ctx.fillText(faceShape.metrics.midLowerRatio.toFixed(2), cardX + cardW - padding, yOffset + fontSize * 0.6);
+            ctx.textAlign = "left";
+            ctx.restore();
+          }
+        }
+
+        // ─── 2c. Desenhar marcadores de IA (mantido do original) ───
+        if (markers.length > 0) {
+          markers.forEach((marker) => {
+            const x = (marker.x / 100) * canvas.width;
+            const y = (marker.y / 100) * canvas.height;
+            const paramInfo = ANALYSIS_PARAMS.find(p => p.id === marker.param);
+            const color = paramInfo?.color || "#ffffff";
+
+            // Círculo
+            ctx.beginPath();
+            ctx.arc(x, y, 15, 0, 2 * Math.PI);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+
+            // Ponto central
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Label
+            ctx.font = "bold 24px Arial";
+            ctx.fillStyle = color;
+            ctx.fillText(`${marker.score.toFixed(1)}`, x + 20, y + 10);
+          });
+        }
       }
 
-      // 3. Draw the combined image (This part seems to be a copy-paste error from the user's side,
-      // as `img`, `width`, `height`, `overlayImg` are not defined here.
-      // I will assume the user intended to replace the previous download logic with `saveCanvasImage`
-      // and keep the marker drawing logic as is, then use the canvas.)
-      // The original code already drew the image and markers on `canvas`.
-      // So, I will remove the problematic lines and directly use `canvas` for `saveCanvasImage`.
-
-      // 4. Use the helper function effectively handles iOS/Mobile sharing or desktop download
+      // 3. Salvar usando o helper (iOS share ou desktop download)
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `analise-facial-${withOverlay ? "com-marcadores" : "original"}-${timestamp}.jpg`;
 
