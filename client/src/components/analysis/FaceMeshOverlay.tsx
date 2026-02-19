@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FaceLandmarkerResult, NormalizedLandmark } from '@mediapipe/tasks-vision';
+import { FaceLandmarkerResult } from '@mediapipe/tasks-vision';
 
 interface PointOfInterest {
     x: number;
@@ -21,6 +21,33 @@ const FACE_OVAL_INDICES = [
     152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
 ];
 
+/**
+ * Catmull-Rom spline to SVG path conversion
+ */
+function solveCatmullRom(data: { x: number, y: number }[], k: number = 1) {
+    if (k == null) k = 1;
+    const size = data.length;
+    const last = size - 2;
+    let path = `M${Math.round(data[0].x)},${Math.round(data[0].y)}`;
+
+    for (let i = 0; i < size - 1; i++) {
+        const p0 = i === 0 ? data[0] : data[i - 1];
+        const p1 = data[i];
+        const p2 = data[i + 1];
+        const p3 = i === last ? p2 : data[i + 2];
+
+        const cp1x = p1.x + (p2.x - p0.x) / 6 * k;
+        const cp1y = p1.y + (p2.y - p0.y) / 6 * k;
+
+        const cp2x = p2.x - (p3.x - p1.x) / 6 * k;
+        const cp2y = p2.y - (p3.y - p1.y) / 6 * k;
+
+        path += ` C${Math.round(cp1x)},${Math.round(cp1y)} ${Math.round(cp2x)},${Math.round(cp2y)} ${Math.round(p2.x)},${Math.round(p2.y)}`;
+    }
+
+    return path;
+}
+
 const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, height, pointsOfInterest = [] }) => {
     const [scannerComplete, setScannerComplete] = useState(false);
 
@@ -39,11 +66,20 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
         };
     };
 
-    // Generate path data for face oval
-    const faceOvalPath = FACE_OVAL_INDICES.map((index, i) => {
-        const point = getPoint(index);
-        return `${i === 0 ? 'M' : 'L'} ${point.x} ${point.y}`;
-    }).join(' ') + ' Z'; // Close the loop
+    // Generate smooth path data for face oval
+    const faceOvalPath = useMemo(() => {
+        const points = FACE_OVAL_INDICES.map(index => getPoint(index));
+        // Close the loop by appending the first few points again for smoothness
+        const closedPoints = [...points, points[0], points[1], points[2]];
+        // We only need to solve up to the first point appended to close it visually
+        // Actually, solveCatmullRom generates a path from 0 to N-1.
+        // For a closed loop with Catmull-Rom, we need to handle wrapping carefully or just duplicate enough points.
+        // A simpler approach for "Apple Design" smoothing is just to use enough points.
+
+        // Let's use the closedPoints logic but generate path only for the original segment length + closure
+        // Standard SVG path smoothing often uses 'S' command or calculating control points.
+        return solveCatmullRom(closedPoints, 0.75); // 0.75 tension
+    }, [landmarks, width, height]);
 
     // Find nearest landmark to a point of interest
     const getNearestLandmark = (targetX: number, targetY: number) => {
@@ -74,14 +110,20 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
             <defs>
                 <linearGradient id="neon-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#06b6d4" /> {/* Cyan-500 */}
-                    <stop offset="100%" stopColor="#10b981" /> {/* Emerald-500 */}
+                    <stop offset="100%" stopColor="#00ffff" /> {/* Electric Cyan */}
                 </linearGradient>
 
+                {/* Glow Filter: Blurred copy behind sharp line */}
                 <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
-                    <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
-                    <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#06b6d4" floodOpacity="0.5" />
+                    {/* Thicker blur for the glow */}
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                     <feMerge>
+                        {/* The glow */}
                         <feMergeNode in="coloredBlur" />
+                        {/* The original sharp line will be drawn on top by the shape itself if we don't merge here, 
+                 but merging simplifies applied filters. 
+                 However, to get "sharp line + blur", we usually draw the shape twice or use drop-shadow.
+                 Let's stick to drop-shadow for simplicity + blur. */}
                         <feMergeNode in="SourceGraphic" />
                     </feMerge>
                 </filter>
@@ -91,37 +133,58 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
             {!scannerComplete && (
                 <motion.line
                     x1="0" y1="0" x2="100%" y2="0"
-                    stroke="url(#neon-gradient)"
-                    strokeWidth="3"
-                    strokeOpacity="0.8"
+                    stroke="#00ffff"
+                    strokeWidth="2"
                     initial={{ y1: 0, y2: 0, opacity: 0 }}
                     animate={{ y1: height, y2: height, opacity: [0, 1, 1, 0] }}
                     transition={{ duration: 2, ease: "linear" }}
                     onAnimationComplete={() => setScannerComplete(true)}
-                    style={{ filter: "drop-shadow(0 0 8px #06b6d4)" }}
+                    style={{ filter: "drop-shadow(0 0 8px #00ffff)" }}
                 />
             )}
 
             {/* Jawline / Face Oval Animation */}
+            {/* Layer 1: The Glow (Blurred) */}
             {scannerComplete && (
-                <motion.path
-                    d={faceOvalPath}
-                    fill="none"
-                    stroke="url(#neon-gradient)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    filter="url(#neon-glow)"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{
-                        pathLength: 1,
-                        opacity: [0.4, 0.8, 0.4]
-                    }}
-                    transition={{
-                        pathLength: { duration: 2, ease: "easeInOut" },
-                        opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
-                    }}
-                />
+                <>
+                    <motion.path
+                        d={faceOvalPath}
+                        fill="none"
+                        stroke="#00ffff"
+                        strokeWidth="4"
+                        strokeOpacity="0.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        filter="url(#neon-glow)"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{
+                            pathLength: 1,
+                            opacity: [0.2, 0.5, 0.2]
+                        }}
+                        transition={{
+                            pathLength: { duration: 2, ease: "easeInOut" },
+                            opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                        }}
+                    />
+                    {/* Layer 2: The Sharp Line */}
+                    <motion.path
+                        d={faceOvalPath}
+                        fill="none"
+                        stroke="#00ffff"
+                        strokeWidth="1.5" /* Thinner line request */
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{
+                            pathLength: 1,
+                            opacity: [0.6, 1, 0.6]
+                        }}
+                        transition={{
+                            pathLength: { duration: 2, ease: "easeInOut" },
+                            opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                        }}
+                    />
+                </>
             )}
 
             {/* Diagnostic Markers */}
@@ -134,19 +197,18 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
                         <motion.circle
                             r="4"
                             fill="none"
-                            stroke="#ef4444" // Red-500
+                            stroke="#ef4444" // Keep red for alerts
                             strokeWidth="2"
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1.5, opacity: 0 }}
                             transition={{
-                                delay: 2 + (index * 0.2), // Wait for face contour + index delay
+                                delay: 2 + (index * 0.2),
                                 duration: 1.5,
                                 repeat: Infinity,
                                 ease: "easeOut"
                             }}
                         />
 
-                        {/* Static Center */}
                         <motion.circle
                             r="2"
                             fill="#ef4444"
@@ -155,27 +217,13 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
                             transition={{ delay: 2 + (index * 0.2) }}
                         />
 
-                        {poi.label && (
-                            <text
-                                x="10"
-                                y="5"
-                                fill="white"
-                                fontSize="10"
-                                className="font-mono"
-                                style={{ textShadow: '0 0 5px black' }}
-                            >
-                                {poi.label}
-                            </text>
-                        )}
-
-                        {/* Connecting line to mesh point (optional visual flair) */}
+                        {/* Connecting line to mesh point */}
                         <motion.line
-                            x1="0" y1="0" x2="0" y2="0"
+                            x1="0" y1="0" x2="0" y2="0" // In this component, we anchor to the mesh point, so 0,0 is the anchor.
+                            // If we wanted to draw a line FROM the original POI TO the anchor, we'd need to inverse transform.
+                            // But current logic snaps the whole marker to the anchor.
                             stroke="#ef4444"
                             strokeWidth="1"
-                            initial={{ pathLength: 0, opacity: 0 }}
-                            animate={{ pathLength: 1, opacity: 0.5 }}
-                            transition={{ delay: 2 + (index * 0.2), duration: 0.5 }}
                         />
                     </g>
                 );
