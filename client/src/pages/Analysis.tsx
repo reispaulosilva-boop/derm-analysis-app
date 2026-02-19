@@ -861,21 +861,93 @@ export default function Analysis() {
                       </div>
                     </div>
 
-                    {/* Face Shape Badge */}
+                    {/* Face Shape Badge & Summary Card */}
                     {faceShape && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40"
-                      >
-                        <div className="px-4 py-2 bg-cyan-950/80 backdrop-blur-md border border-cyan-500/50 rounded-full flex items-center gap-3 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-                          <ScanFace className="w-4 h-4 text-cyan-400" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest leading-none">GEOMETRIA FACIAL</span>
-                            <span className="text-sm font-bold text-white leading-none mt-1">{faceShape.shape}</span>
+                      <>
+                        {/* Summary Card (Top Right) */}
+                        <motion.div
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 1 }}
+                          className="absolute top-4 right-4 z-50 bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl min-w-[200px]"
+                        >
+                          <div className="space-y-3">
+                            <div className="border-b border-white/10 pb-2 mb-2">
+                              <h3 className="text-xs text-white/60 font-medium uppercase tracking-wider">Resultado</h3>
+                              <p className="text-xl font-bold text-white mt-0.5">{faceShape.shape}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-cyan-400">Largura Bizigomática</span>
+                                  <span className="text-white font-mono opacity-80">{(faceShape.metrics.bizygomaticWidth * 100).toFixed(1)}</span>
+                                </div>
+                                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(faceShape.metrics.bizygomaticWidth * 120, 100)}%` }}
+                                    transition={{ duration: 1, delay: 1.2 }}
+                                    className="h-full bg-cyan-400"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-fuchsia-400">Largura Bigonial</span>
+                                  <span className="text-white font-mono opacity-80">{(faceShape.metrics.bigonialWidth * 100).toFixed(1)}</span>
+                                </div>
+                                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(faceShape.metrics.bigonialWidth * 120, 100)}%` }}
+                                    transition={{ duration: 1, delay: 1.4 }}
+                                    className="h-full bg-fuchsia-400"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-amber-400">Altura Facial</span>
+                                  <span className="text-white font-mono opacity-80">{(faceShape.metrics.facialHeight * 100).toFixed(1)}</span>
+                                </div>
+                                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(faceShape.metrics.facialHeight * 120, 100)}%` }}
+                                    transition={{ duration: 1, delay: 1.6 }}
+                                    className="h-full bg-amber-400"
+                                  />
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t border-white/10 mt-2">
+                                <div className="flex justify-between text-[10px]">
+                                  <span className="text-white/60">Proporção (Médio/Inf)</span>
+                                  <span className="text-white font-mono">{(faceShape.metrics.midLowerRatio).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </motion.div>
+                        </motion.div>
+
+                        {/* Badge Bottom (Optional - keeping for consistency or removing if redundant) */}
+                        {/* Keeping it as a quick primary indicator */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40"
+                        >
+                          <div className="px-4 py-2 bg-cyan-950/80 backdrop-blur-md border border-cyan-500/50 rounded-full flex items-center gap-3 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                            <ScanFace className="w-4 h-4 text-cyan-400" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest leading-none">GEOMETRIA FACIAL</span>
+                              <span className="text-sm font-bold text-white leading-none mt-1">{faceShape.shape}</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </>
                     )}
                   </>
                 )}

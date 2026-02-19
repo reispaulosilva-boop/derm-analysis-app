@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FaceLandmarkerResult } from '@mediapipe/tasks-vision';
+import { LANDMARKS } from '@/utils/faceGeometry';
 
 interface PointOfInterest {
     x: number;
@@ -65,6 +66,10 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
             y: landmark.y * height,
         };
     };
+
+    // Helper to convert normalized landmark coordinates to SVG coordinates
+    const convertX = (normalizedX: number) => normalizedX * width;
+    const convertY = (normalizedY: number) => normalizedY * height;
 
     // Generate smooth path data for face oval
     const faceOvalPath = useMemo(() => {
@@ -183,6 +188,71 @@ const FaceMeshOverlay: React.FC<FaceMeshOverlayProps> = ({ results, width, heigh
                             pathLength: { duration: 2, ease: "easeInOut" },
                             opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
                         }}
+                    />
+
+                    {/* ─── AB Face Measurement Lines ─── */}
+                    {/* 1. Bizygomatic Width (Cyan/Teal) - Midface Width */}
+                    <motion.line
+                        x1={convertX(landmarks[LANDMARKS.ZYGOMA_LEFT].x)}
+                        y1={convertY(landmarks[LANDMARKS.ZYGOMA_LEFT].y)}
+                        x2={convertX(landmarks[LANDMARKS.ZYGOMA_RIGHT].x)}
+                        y2={convertY(landmarks[LANDMARKS.ZYGOMA_RIGHT].y)}
+                        stroke="#22d3ee" // Cyan-400
+                        strokeWidth="2"
+                        strokeDasharray="4 4"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 0.8 }}
+                        transition={{ duration: 1.5, delay: 0.5 }}
+                    />
+                    {/* Dot markers for Zygoma */}
+                    <motion.circle cx={convertX(landmarks[LANDMARKS.ZYGOMA_LEFT].x)} cy={convertY(landmarks[LANDMARKS.ZYGOMA_LEFT].y)} r="3" fill="#22d3ee" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }} />
+                    <motion.circle cx={convertX(landmarks[LANDMARKS.ZYGOMA_RIGHT].x)} cy={convertY(landmarks[LANDMARKS.ZYGOMA_RIGHT].y)} r="3" fill="#22d3ee" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.5 }} />
+
+                    {/* 2. Bigonial Width (Purple/Magenta) - Lower Face Width */}
+                    <motion.line
+                        x1={convertX(landmarks[LANDMARKS.GONION_LEFT_ALT].x)}
+                        y1={convertY(landmarks[LANDMARKS.GONION_LEFT_ALT].y)}
+                        x2={convertX(landmarks[LANDMARKS.GONION_RIGHT_ALT].x)}
+                        y2={convertY(landmarks[LANDMARKS.GONION_RIGHT_ALT].y)}
+                        stroke="#e879f9" // Fuchsia-400
+                        strokeWidth="2"
+                        strokeDasharray="4 4"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 0.8 }}
+                        transition={{ duration: 1.5, delay: 0.8 }}
+                    />
+                    {/* Dot markers for Gonion */}
+                    <motion.circle cx={convertX(landmarks[LANDMARKS.GONION_LEFT_ALT].x)} cy={convertY(landmarks[LANDMARKS.GONION_LEFT_ALT].y)} r="3" fill="#e879f9" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.8 }} />
+                    <motion.circle cx={convertX(landmarks[LANDMARKS.GONION_RIGHT_ALT].x)} cy={convertY(landmarks[LANDMARKS.GONION_RIGHT_ALT].y)} r="3" fill="#e879f9" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.8 }} />
+
+                    {/* 3. Facial Height (Amber/Yellow) - Glabella to Menton */}
+                    <motion.line
+                        x1={convertX(landmarks[LANDMARKS.GLABELLA].x)}
+                        y1={convertY(landmarks[LANDMARKS.GLABELLA].y)}
+                        x2={convertX(landmarks[LANDMARKS.MENTON].x)}
+                        y2={convertY(landmarks[LANDMARKS.MENTON].y)}
+                        stroke="#fbbf24" // Amber-400
+                        strokeWidth="2"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 0.8 }}
+                        transition={{ duration: 1.5, delay: 1.1 }}
+                    />
+                    {/* Dot markers for Height */}
+                    <motion.circle cx={convertX(landmarks[LANDMARKS.GLABELLA].x)} cy={convertY(landmarks[LANDMARKS.GLABELLA].y)} r="3" fill="#fbbf24" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.1 }} />
+                    <motion.circle cx={convertX(landmarks[LANDMARKS.MENTON].x)} cy={convertY(landmarks[LANDMARKS.MENTON].y)} r="3" fill="#fbbf24" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1.1 }} />
+
+                    {/* 4. Chin Shape Highlight (Green/Lime) */}
+                    <motion.path
+                        d={`M ${convertX(landmarks[LANDMARKS.GONION_RIGHT_ALT].x)} ${convertY(landmarks[LANDMARKS.GONION_RIGHT_ALT].y)} 
+                            Q ${convertX(landmarks[LANDMARKS.MENTON].x)} ${convertY(landmarks[LANDMARKS.MENTON].y) + (height * 0.05)} 
+                              ${convertX(landmarks[LANDMARKS.GONION_LEFT_ALT].x)} ${convertY(landmarks[LANDMARKS.GONION_LEFT_ALT].y)}`}
+                        fill="none"
+                        stroke="#a3e635" // Lime-400
+                        strokeWidth="2"
+                        opacity="0.6"
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 2, delay: 1.4 }}
                     />
                 </>
             )}

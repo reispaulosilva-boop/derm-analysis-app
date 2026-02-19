@@ -6,9 +6,9 @@ export interface FaceMetrics {
     bizygomaticWidth: number;
     bigonialWidth: number;
     facialHeight: number;
-    widthRatio: number; // Bizygomatic / Bigonial
+    chinShape: 'pointed' | 'rounded' | 'square';
+    midLowerRatio: number; // Bizygomatic / Bigonial
     facialIndex: number; // Facial Height / Bizygomatic Width
-    chinCurvature: number; // Heuristic for chin sharpness
 }
 
 export interface FaceShapeAnalysis {
@@ -18,7 +18,7 @@ export interface FaceShapeAnalysis {
 }
 
 // MediaPipe Landmark Indices (AB Face Methodology)
-const LANDMARKS = {
+export const LANDMARKS = {
     // Bizygomatic Width (Zygoma - widest part of midface)
     ZYGOMA_LEFT: 454,
     ZYGOMA_RIGHT: 234,
@@ -142,9 +142,12 @@ export function evaluateFaceShape(landmarks: NormalizedLandmark[]): FaceShapeAna
             bizygomaticWidth,
             bigonialWidth,
             facialHeight,
-            widthRatio,
+            chinShape: chinBroadness > 0.4 ? 'square' : chinBroadness > 0.2 ? 'rounded' : 'pointed',
+            midLowerRatio: widthRatio,
             facialIndex,
-            chinCurvature: chinBroadness
+            // Note: widthRatio and chinBroadness are internal calculations,
+            // midLowerRatio and chinShape are the public interface metrics.
+            // chinCurvature: chinBroadness // Removed as chinShape is now the public metric
         },
         description
     };
