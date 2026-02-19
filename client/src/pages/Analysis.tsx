@@ -281,8 +281,8 @@ export default function Analysis() {
   const [aiDisclaimer, setAiDisclaimer] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // ─── Face Mesh Hook ───
-  const { detectFace, results: faceMeshResults } = useFaceMesh();
+  // ─── Face Mesh Hook (Disabled for now) ───
+  // const { detectFace, results: faceMeshResults } = useFaceMesh();
   const imageRef = useRef<HTMLImageElement>(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
 
@@ -292,9 +292,9 @@ export default function Analysis() {
         width: imageRef.current.width,
         height: imageRef.current.height,
       });
-      await detectFace(imageRef.current);
+      // await detectFace(imageRef.current);
     }
-  }, [detectFace]);
+  }, []); // Removed detectFace dependency
 
   // Update dimensions on window resize
   useEffect(() => {
@@ -810,29 +810,23 @@ export default function Analysis() {
 
 
                 {/* Face Mesh Overlay */}
-                {faceMeshResults && imgDimensions.width > 0 && (
+                {/* Face Mesh Overlay (Disabled) */}
+                {/* {faceMeshResults && imgDimensions.width > 0 && (
                   <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    {/* The overlay needs to match the image dimensions exactly. 
-                        Since the image is centered and object-contain, we need to position the overlay 
-                        to match the image's actual rendered position. 
-                        However, the FaceMeshOverlay expects width/height and renders an SVG.
-                        It basically acts as a layer on top. 
-                        If we put it in the same container as the img (centered flex), 
-                        and give it the same dimensions as the img, it should align. */}
                     <div style={{ width: imgDimensions.width, height: imgDimensions.height, position: 'relative' }}>
                       <FaceMeshOverlay
-                        results={faceMeshResults}
+                        results={faceMeshResults} // eslint-disable-line
                         width={imgDimensions.width}
                         height={imgDimensions.height}
                         pointsOfInterest={markers.map(m => ({
                           x: (m.x / 100) * imgDimensions.width,
                           y: (m.y / 100) * imgDimensions.height,
-                          label: '' // Optional: m.note
+                          label: ''
                         }))}
                       />
                     </div>
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Overlay heatmap effect */}
