@@ -24,16 +24,30 @@ import {
   Layers,
   Camera,
   Download,
-  ScanFace, // New Icon
+  ScanFace,
+  Save,
+  FileText,
+  Sparkles,
+  Loader2,
+  Info,
+  MoreVertical,
+  Image as ImageIcon,
+  Share2
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { saveCanvasImage } from '@/utils/imageHelpers';
 
-// Typesort { consultationService, patientService } from "@/services/patientService";
+// Services
+// import { consultationService, patientService } from "@/services/patientService";
 import { recommendationService, type Recommendation } from "@/services/recommendationService";
 import { RecommendationModal } from "@/components/analysis/RecommendationModal";
-import { Save, FileText, Sparkles, Loader2, Info } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisService";
 import { useFaceMesh } from "@/hooks/useFaceMesh";
 import FaceMeshOverlay from "@/components/analysis/FaceMeshOverlay";
@@ -482,11 +496,11 @@ export default function Analysis() {
 
       await saveCanvasImage(canvas, filename);
 
-      toast.success("Imagem gerada com sucesso!");
+      toast.success("Imagem salva com sucesso!", { id: toastId });
 
     } catch (error) {
       console.error("Erro ao baixar imagem:", error);
-      toast.error("Erro ao salvar a imagem. Tente novamente.");
+      toast.error("Erro ao salvar a imagem. Tente novamente.", { id: toastId });
     } finally {
       setIsDownloading(false);
     }
@@ -870,12 +884,12 @@ export default function Analysis() {
                     {/* Face Shape Badge & Summary Card */}
                     {faceShape && (
                       <>
-                        {/* Summary Card (Top Left, Scaled Down) */}
+                        {/* Summary Card (Top Left, Scaled Down for Mobile) */}
                         <motion.div
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 1 }}
-                          className="absolute top-4 left-4 z-50 bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-xl min-w-[160px] scale-90 origin-top-left"
+                          className="absolute top-4 left-4 z-50 bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-xl min-w-[160px] scale-75 md:scale-90 origin-top-left"
                         >
                           <div className="space-y-3">
                             <div className="border-b border-white/10 pb-2 mb-2">
@@ -1331,31 +1345,43 @@ export default function Analysis() {
                       onClick={() => {
                         const newState = !showFaceAnalysis;
                         setShowFaceAnalysis(newState);
-                        if (newState && faceShape) {
-                          toast.info(`Formato identificado: ${faceShape.shape}`, {
-                            description: faceShape.description,
-                            duration: 5000,
-                          });
-                        } else if (newState && !faceShape) {
-                          toast.loading("Detectando formato facial...", { duration: 2000 });
-                        }
+                        // Removing toast here to avoid clutter if user toggles frequently
+                        // Or simplifying it
                       }}
                     >
                       <ScanFace className="w-4 h-4 mr-2" />
-                      {showFaceAnalysis ? "Ocultar Análise" : "Avaliar Face"}
+                      {showFaceAnalysis ? "Ocultar" : "Avaliar Face"}
                     </Button>
 
-                    {/* Download Button */}
+
+                    {/* Download Button (Dropdown) */}
                     {image && (
-                      <Button
-                        variant="outline"
-                        className="touch-target rounded-xl"
-                        onClick={() => handleDownload(false)}
-                        disabled={isDownloading}
-                        title="Salvar Foto"
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="touch-target rounded-xl"
+                            disabled={isDownloading}
+                            title="Salvar Foto"
+                          >
+                            {isDownloading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => handleDownload(false)}>
+                            <ImageIcon className="w-4 h-4 mr-2" />
+                            Salvar Original
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownload(true)}>
+                            <ScanFace className="w-4 h-4 mr-2" />
+                            Salvar com Análise
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 import { NormalizedLandmark } from '@mediapipe/tasks-vision';
 
-export type FaceShape = 'Oval' | 'Heart' | 'Round' | 'Angular';
+export type FaceShape = 'Oval' | 'Coração' | 'Redondo' | 'Angular';
 
 export interface FaceMetrics {
     bizygomaticWidth: number;
@@ -112,7 +112,7 @@ export function evaluateFaceShape(landmarks: NormalizedLandmark[]): FaceShapeAna
     // WR > 1.35 indicates the cheekbones are significantly wider than the jaw.
     // We add a check for chin broadness to ensure it's tapering.
     if (widthRatio > 1.35 && chinBroadness < 0.38) {
-        shape = 'Heart';
+        shape = 'Coração';
         description = 'Largura bizigomática maior que a bigonial, com queixo proeminente e afilado (triângulo invertido).';
     }
     // CASO 2: ROSTO ANGULAR (Square/Rectangular)
@@ -128,7 +128,7 @@ export function evaluateFaceShape(landmarks: NormalizedLandmark[]): FaceShapeAna
     // Short face (FI < 1.35) combined with a balanced but not square width ratio.
     else if (facialIndex < 1.35) {
         // Automatically falls into range 1.15 <= WR <= 1.35 due to previous checks
-        shape = 'Round';
+        shape = 'Redondo';
         description = 'Altura facial próxima à largura bizigomática, contornos suaves e sem ângulos marcados.';
     }
     // CASO 4: ROSTO OVAL (Oval Shape)
