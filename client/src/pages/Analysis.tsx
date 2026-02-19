@@ -28,7 +28,9 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
-import { consultationService, patientService } from "@/services/patientService";
+import { saveCanvasImage } from '@/utils/imageHelpers';
+
+// Typesort { consultationService, patientService } from "@/services/patientService";
 import { recommendationService, type Recommendation } from "@/services/recommendationService";
 import { RecommendationModal } from "@/components/analysis/RecommendationModal";
 import { Save, FileText, Sparkles, Loader2, Info } from "lucide-react";
@@ -467,20 +469,24 @@ export default function Analysis() {
         });
       }
 
-      // 3. Converte para Link de Download
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      // Nome do arquivo com data
-      link.download = `SkinScope-${withOverlay ? 'Analise' : 'Foto'}-${new Date().getTime()}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // 3. Draw the combined image (This part seems to be a copy-paste error from the user's side,
+      // as `img`, `width`, `height`, `overlayImg` are not defined here.
+      // I will assume the user intended to replace the previous download logic with `saveCanvasImage`
+      // and keep the marker drawing logic as is, then use the canvas.)
+      // The original code already drew the image and markers on `canvas`.
+      // So, I will remove the problematic lines and directly use `canvas` for `saveCanvasImage`.
 
-      toast.success("Foto salva na galeria!", { id: toastId });
+      // 4. Use the helper function effectively handles iOS/Mobile sharing or desktop download
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `analise-facial-${withOverlay ? "com-marcadores" : "original"}-${timestamp}.jpg`;
+
+      await saveCanvasImage(canvas, filename);
+
+      toast.success("Imagem gerada com sucesso!");
+
     } catch (error) {
-      console.error(error);
-      toast.error("Erro ao salvar imagem.", { id: toastId });
+      console.error("Erro ao baixar imagem:", error);
+      toast.error("Erro ao salvar a imagem. Tente novamente.");
     } finally {
       setIsDownloading(false);
     }
@@ -864,12 +870,12 @@ export default function Analysis() {
                     {/* Face Shape Badge & Summary Card */}
                     {faceShape && (
                       <>
-                        {/* Summary Card (Top Right) */}
+                        {/* Summary Card (Top Left, Scaled Down) */}
                         <motion.div
-                          initial={{ opacity: 0, x: 20 }}
+                          initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 1 }}
-                          className="absolute top-4 right-4 z-50 bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-xl min-w-[200px]"
+                          className="absolute top-4 left-4 z-50 bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-xl min-w-[160px] scale-90 origin-top-left"
                         >
                           <div className="space-y-3">
                             <div className="border-b border-white/10 pb-2 mb-2">
@@ -909,11 +915,11 @@ export default function Analysis() {
                               </div>
 
                               <div>
-                                <div className="flex justify-between text-xs mb-1">
+                                <div className="flex justify-between text-[10px] mb-0.5">
                                   <span className="text-amber-400">Altura Facial</span>
                                   <span className="text-white font-mono opacity-80">{(faceShape.metrics.facialHeight * 100).toFixed(1)}</span>
                                 </div>
-                                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
                                   <motion.div
                                     initial={{ width: 0 }}
                                     animate={{ width: `${Math.min(faceShape.metrics.facialHeight * 120, 100)}%` }}
@@ -922,9 +928,9 @@ export default function Analysis() {
                                   />
                                 </div>
                               </div>
-                              <div className="pt-2 border-t border-white/10 mt-2">
-                                <div className="flex justify-between text-[10px]">
-                                  <span className="text-white/60">Proporção (Médio/Inf)</span>
+                              <div className="pt-2 border-t border-white/10 mt-1">
+                                <div className="flex justify-between text-[9px]">
+                                  <span className="text-white/60">Proporção (Med/Inf)</span>
                                   <span className="text-white font-mono">{(faceShape.metrics.midLowerRatio).toFixed(2)}</span>
                                 </div>
                               </div>
