@@ -24,6 +24,7 @@ import {
   Layers,
   Camera,
   Download,
+  ScanFace, // New Icon
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
@@ -34,6 +35,7 @@ import { Save, FileText, Sparkles, Loader2, Info } from "lucide-react";
 import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisService";
 import { useFaceMesh } from "@/hooks/useFaceMesh";
 import FaceMeshOverlay from "@/components/analysis/FaceMeshOverlay";
+import { evaluateFaceShape, type FaceShapeAnalysis } from "@/utils/faceGeometry";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -281,10 +283,13 @@ export default function Analysis() {
   const [aiDisclaimer, setAiDisclaimer] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // ─── Face Mesh Hook (Disabled for now) ───
-  // const { detectFace, results: faceMeshResults } = useFaceMesh();
+  // ─── Face Mesh Hook ───
+  // We keep it always loaded but only trigger detect when needed or image loads if enabled
+  const { detectFace, results: faceMeshResults } = useFaceMesh();
   const imageRef = useRef<HTMLImageElement>(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
+  const [showFaceAnalysis, setShowFaceAnalysis] = useState(false); // Toggle state
+  const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
 
   const handleImageLoad = useCallback(async () => {
     if (imageRef.current) {
@@ -292,9 +297,18 @@ export default function Analysis() {
         width: imageRef.current.width,
         height: imageRef.current.height,
       });
-      // await detectFace(imageRef.current);
+      // Just detect on load to be ready, but don't show yet
+      await detectFace(imageRef.current);
     }
-  }, []); // Removed detectFace dependency
+  }, [detectFace]);
+
+  // Calculate Face Shape when results change
+  useEffect(() => {
+    if (faceMeshResults && faceMeshResults.faceLandmarks && faceMeshResults.faceLandmarks.length > 0) {
+      const analysis = evaluateFaceShape(faceMeshResults.faceLandmarks[0]);
+      setFaceShape(analysis);
+    }
+  }, [faceMeshResults]);
 
   // Update dimensions on window resize
   useEffect(() => {
@@ -719,6 +733,24 @@ export default function Analysis() {
               >
                 <Maximize2 className="w-4 h-4" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`touch-target rounded-xl ${showFaceAnalysis ? "bg-cyan-500/20 text-cyan-400" : ""}`}
+                onClick={() => {
+                  const newState = !showFaceAnalysis;
+                  setShowFaceAnalysis(newState);
+                  if (newState && faceShape) {
+                    toast.info(`Formato identificado: ${faceShape.shape}`, {
+                      description: faceShape.description,
+                      duration: 5000,
+                    });
+                  }
+                }}
+                title="Análise de Geometria Facial"
+              >
+                <ScanFace className="w-4 h-4" />
+              </Button>
             </div>
           )}
         </motion.header>
@@ -810,23 +842,44 @@ export default function Analysis() {
 
 
                 {/* Face Mesh Overlay */}
-                {/* Face Mesh Overlay (Disabled) */}
-                {/* {faceMeshResults && imgDimensions.width > 0 && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    <div style={{ width: imgDimensions.width, height: imgDimensions.height, position: 'relative' }}>
-                      <FaceMeshOverlay
-                        results={faceMeshResults} // eslint-disable-line
-                        width={imgDimensions.width}
-                        height={imgDimensions.height}
-                        pointsOfInterest={markers.map(m => ({
-                          x: (m.x / 100) * imgDimensions.width,
-                          y: (m.y / 100) * imgDimensions.height,
-                          label: ''
-                        }))}
-                      />
+
+                {/* Face Mesh Overlay & Shape Analysis */}
+                {showFaceAnalysis && faceMeshResults && imgDimensions.width > 0 && (
+                  <>
+                    {/* Visual Overlay */}
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                      <div style={{ width: imgDimensions.width, height: imgDimensions.height, position: 'relative' }}>
+                        <FaceMeshOverlay
+                          results={faceMeshResults}
+                          width={imgDimensions.width}
+                          height={imgDimensions.height}
+                          pointsOfInterest={markers.map(m => ({
+                            x: (m.x / 100) * imgDimensions.width,
+                            y: (m.y / 100) * imgDimensions.height,
+                            label: ''
+                          }))}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )} */}
+
+                    {/* Face Shape Badge */}
+                    {faceShape && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40"
+                      >
+                        <div className="px-4 py-2 bg-cyan-950/80 backdrop-blur-md border border-cyan-500/50 rounded-full flex items-center gap-3 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                          <ScanFace className="w-4 h-4 text-cyan-400" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest leading-none">GEOMETRIA FACIAL</span>
+                            <span className="text-sm font-bold text-white leading-none mt-1">{faceShape.shape}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Overlay heatmap effect */}
