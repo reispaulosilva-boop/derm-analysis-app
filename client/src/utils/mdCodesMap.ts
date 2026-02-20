@@ -1,0 +1,53 @@
+export interface MDCode {
+    code: string;
+    label: string;
+    right: number;
+    left: number;
+}
+
+export const MD_CODES_MAP: Record<string, MDCode[]> = {
+    midface: [
+        { code: "Ck1", label: "Zygomatic Arch", right: 127, left: 356 },
+        { code: "Ck2", label: "Zygomatic Eminence", right: 116, left: 345 },
+        { code: "Ck3", label: "Anteromedial Cheek", right: 205, left: 425 },
+        { code: "Ck4", label: "Lateral Zygoma", right: 123, left: 352 },
+        { code: "Ck5", label: "Submalar", right: 214, left: 434 },
+    ],
+    upper_face: [
+        { code: "T1", label: "Anterior Temple", right: 21, left: 251 },
+        { code: "T2", label: "Posterior Temple", right: 162, left: 389 },
+        { code: "F1", label: "Central Forehead", right: 9, left: 9 },
+        { code: "F2", label: "Lateral Forehead", right: 105, left: 334 },
+        { code: "F3", label: "Temporal Crest", right: 67, left: 297 },
+    ],
+    periorbital: [
+        { code: "E1", label: "Eyebrow Tail", right: 70, left: 300 },
+        { code: "E2", label: "Eyebrow Mid", right: 63, left: 293 },
+        { code: "E3", label: "Eyebrow Head", right: 107, left: 336 },
+        { code: "Tt1", label: "Tear Trough Medial", right: 133, left: 362 },
+        { code: "Tt2", label: "Tear Trough Lateral", right: 155, left: 382 },
+        { code: "Tt3", label: "Palpebromalar", right: 206, left: 426 },
+        { code: "O1", label: "Orbital Superolat", right: 158, left: 385 },
+        { code: "O2", label: "Orbital Inferolat", right: 145, left: 374 },
+        { code: "O3", label: "Orbital Inferomed", right: 153, left: 380 },
+    ],
+    lower_face: [
+        { code: "C1", label: "Chin Apex", right: 152, left: 152 },
+        { code: "C2", label: "Labiomental", right: 175, left: 175 },
+        { code: "Jw1", label: "Mandible Angle", right: 172, left: 397 },
+        { code: "Jw2", label: "Mandible Body", right: 136, left: 365 },
+        { code: "Jw4", label: "Pre-jowl Area", right: 149, left: 378 },
+        { code: "Jw5", label: "Post-jowl Area", right: 172, left: 397 },
+    ],
+    perioral: [
+        { code: "NL1", label: "Nasolabial Upper", right: 203, left: 423 },
+        { code: "NL2", label: "Nasolabial Mid", right: 129, left: 358 },
+        { code: "NL3", label: "Nasolabial Lower", right: 216, left: 436 },
+        { code: "M1", label: "Marionette Upper", right: 202, left: 422 },
+        { code: "M2", label: "Marionette Mid", right: 210, left: 430 },
+        { code: "M3", label: "Marionette Lower", right: 211, left: 431 },
+        { code: "L1", label: "Upper Lip Border", right: 37, left: 267 },
+        { code: "L2", label: "Lower Lip Border", right: 84, left: 314 },
+        { code: "L8", label: "Cupids Bow", right: 0, left: 0 },
+    ],
+};

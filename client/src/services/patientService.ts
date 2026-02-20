@@ -1,5 +1,6 @@
 
 import { supabase, type Patient, type Consultation } from '../lib/supabase';
+export type { Patient, Consultation };
 
 export const patientService = {
     async getPatients() {

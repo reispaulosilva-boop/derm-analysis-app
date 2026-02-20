@@ -1,0 +1,405 @@
+{
+    "meta": {
+        "source": "MD Codes™: A Methodological Approach (2020) & MediaPipe Geometry",
+        "units": "mL for volume, cm for geometry"
+    },
+    "codes": {
+        "foundation": [
+            {
+                "id": "Ck1",
+                "name": "Zygomatic Arch",
+                "indices": {
+                    "right": 127,
+                    "left": 356
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal (Bone)",
+                    "tool": "Needle",
+                    "active_volume": "0.1 - 0.2",
+                    "technique": "Bolus",
+                    "alert": false
+                },
+                "purpose": "Lateral Lifting & Anchorage"
+            },
+            {
+                "id": "Ck2",
+                "name": "Zygomatic Eminence",
+                "indices": {
+                    "right": 116,
+                    "left": 345
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.1 - 0.2",
+                    "technique": "Bolus",
+                    "alert": false
+                },
+                "purpose": "Projection & Lifting"
+            },
+            {
+                "id": "Ck3",
+                "name": "Anteromedial Cheek",
+                "indices": {
+                    "right": 205,
+                    "left": 425
+                },
+                "clinical": {
+                    "depth": "Deep Fat / Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.3 - 0.5",
+                    "technique": "Bolus",
+                    "alert": true,
+                    "alert_reason": "Infraorbital Bundle"
+                },
+                "purpose": "Volume Replacement"
+            },
+            {
+                "id": "Ck4",
+                "name": "Lateral Lower Cheek",
+                "indices": {
+                    "right": 123,
+                    "left": 352
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.5",
+                    "technique": "Fanning",
+                    "alert": true,
+                    "alert_reason": "Parotid Gland"
+                },
+                "purpose": "Lateral Contouring"
+            },
+            {
+                "id": "Ck5",
+                "name": "Submalar",
+                "indices": {
+                    "right": 214,
+                    "left": 434
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.5 - 1.0",
+                    "technique": "Fanning",
+                    "alert": false
+                },
+                "purpose": "Hollow Cheek Correction"
+            }
+        ],
+        "contour": [
+            {
+                "id": "T1",
+                "name": "Anterior Temple",
+                "indices": {
+                    "right": 21,
+                    "left": 251
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.5",
+                    "technique": "Bolus",
+                    "alert": true,
+                    "alert_reason": "Superficial Temporal Artery"
+                },
+                "purpose": "Temple Filling"
+            },
+            {
+                "id": "T2",
+                "name": "Posterior Temple",
+                "indices": {
+                    "right": 162,
+                    "left": 389
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.5",
+                    "technique": "Bolus",
+                    "alert": false
+                },
+                "purpose": "Temple Lifting"
+            },
+            {
+                "id": "Jw1",
+                "name": "Mandibular Angle",
+                "indices": {
+                    "right": 172,
+                    "left": 397
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.5 - 1.0",
+                    "technique": "Bolus",
+                    "alert": false
+                },
+                "purpose": "Jawline Definition"
+            },
+            {
+                "id": "Jw2",
+                "name": "Mandibular Body",
+                "indices": {
+                    "right": 136,
+                    "left": 365
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "1.0",
+                    "technique": "Linear Retrograde",
+                    "alert": true,
+                    "alert_reason": "Facial Artery (Antegonial Notch)"
+                },
+                "purpose": "Jawline Topography"
+            },
+            {
+                "id": "Jw4",
+                "name": "Pre-jowl Area",
+                "indices": {
+                    "right": 149,
+                    "left": 378
+                },
+                "clinical": {
+                    "depth": "Deep Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.5",
+                    "technique": "Fanning",
+                    "alert": false
+                },
+                "purpose": "Camouflage Jowl"
+            },
+            {
+                "id": "Jw5",
+                "name": "Post-jowl Area",
+                "indices": {
+                    "right": 172,
+                    "left": 397
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Needle",
+                    "active_volume": "0.5",
+                    "technique": "Bolus",
+                    "alert": false
+                },
+                "purpose": "Jawline Straightening"
+            },
+            {
+                "id": "C1",
+                "name": "Chin Apex",
+                "indices": {
+                    "right": 152,
+                    "left": 152
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.5 - 1.0",
+                    "technique": "Bolus",
+                    "alert": false
+                },
+                "purpose": "Chin Projection"
+            },
+            {
+                "id": "C2",
+                "name": "Labiomental",
+                "indices": {
+                    "right": 175,
+                    "left": 175
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Needle",
+                    "active_volume": "0.5",
+                    "technique": "Bolus/Linear",
+                    "alert": false
+                },
+                "purpose": "Mental Crease Support"
+            }
+        ],
+        "refinement": [
+            {
+                "id": "Tt1",
+                "name": "Central Infraorbital",
+                "indices": {
+                    "right": 133,
+                    "left": 362
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Cannula",
+                    "active_volume": "0.2 - 0.3",
+                    "technique": "Micro-bolus",
+                    "alert": true,
+                    "alert_reason": "Infraorbital Artery"
+                },
+                "purpose": "Tear Trough Correction"
+            },
+            {
+                "id": "Tt2",
+                "name": "Lateral Infraorbital",
+                "indices": {
+                    "right": 155,
+                    "left": 382
+                },
+                "clinical": {
+                    "depth": "Supraperiosteal",
+                    "tool": "Cannula",
+                    "active_volume": "0.2",
+                    "technique": "Micro-bolus",
+                    "alert": false
+                },
+                "purpose": "Tear Trough Support"
+            },
+            {
+                "id": "Tt3",
+                "name": "Palpebromalar",
+                "indices": {
+                    "right": 206,
+                    "left": 426
+                },
+                "clinical": {
+                    "depth": "Deep Fat",
+                    "tool": "Cannula",
+                    "active_volume": "0.3",
+                    "technique": "Fanning",
+                    "alert": false
+                },
+                "purpose": "Lid-Cheek Junction"
+            },
+            {
+                "id": "NL1",
+                "name": "Upper Nasolabial",
+                "indices": {
+                    "right": 203,
+                    "left": 423
+                },
+                "clinical": {
+                    "depth": "Subcutaneous/Deep Dermal",
+                    "tool": "Cannula",
+                    "active_volume": "0.3 - 0.5",
+                    "technique": "Linear/Fanning",
+                    "alert": true,
+                    "alert_reason": "Facial Artery/Nasal Flare"
+                },
+                "purpose": "Nasolabial Folds"
+            },
+            {
+                "id": "NL2",
+                "name": "Mid Nasolabial",
+                "indices": {
+                    "right": 129,
+                    "left": 358
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.3",
+                    "technique": "Linear",
+                    "alert": false
+                },
+                "purpose": "Nasolabial Folds"
+            },
+            {
+                "id": "NL3",
+                "name": "Lower Nasolabial",
+                "indices": {
+                    "right": 216,
+                    "left": 436
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.3",
+                    "technique": "Linear",
+                    "alert": false
+                },
+                "purpose": "Nasolabial Folds"
+            },
+            {
+                "id": "M1",
+                "name": "Marionette Upper",
+                "indices": {
+                    "right": 202,
+                    "left": 422
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.3",
+                    "technique": "Linear",
+                    "alert": true,
+                    "alert_reason": "Modiolus"
+                },
+                "purpose": "Oral Commissure Support"
+            },
+            {
+                "id": "M2",
+                "name": "Marionette Mid",
+                "indices": {
+                    "right": 210,
+                    "left": 430
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.3",
+                    "technique": "Fanning",
+                    "alert": false
+                },
+                "purpose": "Marionette Lines"
+            },
+            {
+                "id": "M3",
+                "name": "Marionette Lower",
+                "indices": {
+                    "right": 211,
+                    "left": 431
+                },
+                "clinical": {
+                    "depth": "Subcutaneous",
+                    "tool": "Cannula",
+                    "active_volume": "0.3",
+                    "technique": "Fanning",
+                    "alert": false
+                },
+                "purpose": "Marionette Lines"
+            },
+            {
+                "id": "L1",
+                "name": "Upper Lip Vermilion",
+                "indices": {
+                    "right": 37,
+                    "left": 267
+                },
+                "clinical": {
+                    "depth": "Submucosal",
+                    "tool": "Needle",
+                    "active_volume": "0.1",
+                    "technique": "Linear Retrograde",
+                    "alert": false
+                },
+                "purpose": "Lip Definition"
+            },
+            {
+                "id": "L2",
+                "name": "Lower Lip Vermilion",
+                "indices": {
+                    "right": 84,
+                    "left": 314
+                },
+                "clinical": {
+                    "depth": "Submucosal",
+                    "tool": "Needle",
+                    "active_volume": "0.1",
+                    "technique": "Linear Retrograde",
+                    "alert": false
+                },
+                "purpose": "Lip Volumizing"
+            }
+        ]
+    }
+}

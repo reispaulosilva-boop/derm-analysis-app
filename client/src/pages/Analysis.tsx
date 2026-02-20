@@ -51,7 +51,10 @@ import {
 import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisService";
 import { useFaceMesh } from "@/hooks/useFaceMesh";
 import FaceMeshOverlay, { FACE_OVAL_INDICES, solveCatmullRom } from "@/components/analysis/FaceMeshOverlay";
+import MDCodesOverlay from "@/components/analysis/MDCodesOverlay";
+import WebcamCapture from "@/components/analysis/WebcamCapture";
 import { evaluateFaceShape, LANDMARKS, type FaceShapeAnalysis } from "@/utils/faceGeometry";
+import { analyzeExpression, type ExpressionAnalysis } from "@/utils/expressionAnalysis";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -69,7 +72,7 @@ const ANALYSIS_PARAMS = [
   { id: "healthy", label: "Saudável", color: "#10b981", bgColor: "rgba(16,185,129,0.25)" },
 ] as const;
 
-type ParamId = (typeof ANALYSIS_PARAMS)[number]["id"];
+export type ParamId = (typeof ANALYSIS_PARAMS)[number]["id"];
 
 interface Marker {
   id: string;
@@ -273,6 +276,7 @@ function AnalysisOverlay({
 export default function Analysis() {
   const [showOverlayAnalysis, setShowOverlayAnalysis] = useState(false);
   const [image, setImage] = useState<string | null>(null);
+  const [showWebcam, setShowWebcam] = useState(false);
 
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [activeParam, setActiveParam] = useState<ParamId>("erythema");
@@ -305,7 +309,9 @@ export default function Analysis() {
   const imageRef = useRef<HTMLImageElement>(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
   const [showFaceAnalysis, setShowFaceAnalysis] = useState(false); // Toggle state
+  const [showMDCodes, setShowMDCodes] = useState(false); // Toggle state for MD Codes
   const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
+  const [expressionResult, setExpressionResult] = useState<ExpressionAnalysis | null>(null);
 
   const handleImageLoad = useCallback(async () => {
     if (imageRef.current) {
@@ -318,11 +324,24 @@ export default function Analysis() {
     }
   }, [detectFace]);
 
-  // Calculate Face Shape when results change
+  // Calculate Face Shape and Expression when results change
   useEffect(() => {
     if (faceMeshResults && faceMeshResults.faceLandmarks && faceMeshResults.faceLandmarks.length > 0) {
       const analysis = evaluateFaceShape(faceMeshResults.faceLandmarks[0]);
       setFaceShape(analysis);
+
+      // Expression Analysis
+      if (faceMeshResults.faceBlendshapes && faceMeshResults.faceBlendshapes.length > 0) {
+        const expression = analyzeExpression(faceMeshResults.faceBlendshapes[0]);
+        setExpressionResult(expression);
+
+        if (!expression.isNeutral && expression.warningMessage) {
+          toast.warning("Expressão Detectada", {
+            description: expression.warningMessage,
+            duration: 5000,
+          });
+        }
+      }
     }
   }, [faceMeshResults]);
 
@@ -904,12 +923,7 @@ export default function Analysis() {
             </Button>
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold truncate">Análise de Formato Facial</h1>
-            <p className="text-xs text-muted-foreground truncate">
-              {faceShape
-                ? `Formato identificado: ${faceShape.shape}`
-                : "Carregue uma foto para análise geométrica"}
-            </p>
+            <h1 className="text-lg font-semibold truncate">Análise Facial</h1>
           </div>
           {image && (
             <div className="flex gap-1 shrink-0">
@@ -1000,27 +1014,45 @@ export default function Analysis() {
       <div className="flex-1 flex flex-col min-h-0">
         {!image ? (
           /* ─── Upload State ─── */
+          /* ─── Upload State ─── */
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex-1 flex items-center justify-center px-6"
+            className="flex-1 flex flex-col items-center justify-center px-6 gap-8"
           >
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="w-full max-w-xs aspect-[3/4] rounded-2xl border-2 border-dashed border-border/60 bg-card/30 backdrop-blur-sm flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/40 transition-colors active:scale-[0.98]"
+              className="w-full max-w-xs aspect-[3/4] rounded-2xl border-2 border-dashed border-border/60 bg-card/30 backdrop-blur-sm flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/40 transition-colors active:scale-[0.98] group"
             >
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Camera className="w-7 h-7 text-primary" />
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Upload className="w-7 h-7 text-primary" />
               </div>
               <div className="text-center">
                 <p className="text-foreground font-medium mb-1">
                   Carregar Foto
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground px-4">
                   Toque para selecionar do rolo de câmera
                 </p>
               </div>
             </div>
+
+            <div className="flex items-center gap-4 w-full max-w-xs">
+              <div className="h-px bg-white/10 flex-1" />
+              <span className="text-white/40 text-xs font-medium uppercase">Ou</span>
+              <div className="h-px bg-white/10 flex-1" />
+            </div>
+
+            <Button
+              onClick={() => setShowWebcam(true)}
+              size="lg"
+              variant="outline"
+              className="w-full max-w-xs h-14 rounded-xl border-primary/20 hover:bg-primary/10 text-primary gap-3 text-lg"
+            >
+              <Camera className="w-5 h-5" />
+              Câmera Inteligente
+            </Button>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -1195,6 +1227,15 @@ export default function Analysis() {
                     );
                   })}
                 </div>
+              )}
+
+              {/* MD Codes Visualizer */}
+              {showMDCodes && faceMeshResults?.faceLandmarks && imgDimensions.width > 0 && (
+                <MDCodesOverlay
+                  landmarks={faceMeshResults.faceLandmarks[0]}
+                  width={imgDimensions.width}
+                  height={imgDimensions.height}
+                />
               )}
 
               {/* AI Disclaimer Banner */}
@@ -1536,21 +1577,57 @@ export default function Analysis() {
                       Carregar
                     </Button>
 
-                    {/* Face Shape Analysis Button (Replaces AI Scan) */}
-                    <Button
-                      className={`touch-target rounded-xl font-medium flex-1 ${showFaceAnalysis
-                        ? "bg-cyan-600 hover:bg-cyan-700 text-white shadow-[0_0_15px_rgba(8,145,178,0.4)]"
-                        : "bg-primary text-primary-foreground"}`}
-                      onClick={() => {
-                        const newState = !showFaceAnalysis;
-                        setShowFaceAnalysis(newState);
-                        // Removing toast here to avoid clutter if user toggles frequently
-                        // Or simplifying it
-                      }}
-                    >
-                      <ScanFace className="w-4 h-4 mr-2" />
-                      {showFaceAnalysis ? "Ocultar" : "Avaliar Face"}
-                    </Button>
+                    {/* Avaliação Dropdown (Replaces Face Shape Analysis Button) */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          className={`touch-target rounded-xl font-medium flex-1 ${showFaceAnalysis
+                            ? "bg-cyan-600 hover:bg-cyan-700 text-white shadow-[0_0_15px_rgba(8,145,178,0.4)]"
+                            : "bg-primary text-primary-foreground"}`}
+                        >
+                          <ScanFace className="w-4 h-4 mr-2" />
+                          Avaliação
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const newState = !showFaceAnalysis;
+                            setShowFaceAnalysis(newState);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <ScanFace className="w-4 h-4 mr-2" />
+                          <span>Forma Facial</span>
+                          {showFaceAnalysis && (
+                            <span className="ml-auto text-xs font-mono text-cyan-500">
+                              (Ativo)
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const newState = !showMDCodes;
+                            setShowMDCodes(newState);
+                            if (newState) {
+                              toast.info("Visualização MD Codes Ativada", {
+                                description: "Pontos de injeção anatômicos (Ck, T, F, E...)."
+                              });
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <ScanFace className="w-4 h-4 mr-2" />
+                          <span>MD Codes</span>
+                          {showMDCodes && (
+                            <span className="ml-auto text-xs font-mono text-cyan-500">
+                              (Ativo)
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
 
                     {/* Download Button (Dropdown) */}
@@ -1624,6 +1701,27 @@ export default function Analysis() {
           className="hidden"
         />
       )}
+      {/* Webcam Modal */}
+      <AnimatePresence>
+        {showWebcam && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100]"
+          >
+            <WebcamCapture
+              onCapture={(imgData, toggles) => {
+                setImage(imgData);
+                setShowFaceAnalysis(toggles.faceShape);
+                setShowMDCodes(toggles.mdCodes);
+                setShowWebcam(false);
+              }}
+              onClose={() => setShowWebcam(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
