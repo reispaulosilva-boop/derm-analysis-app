@@ -310,6 +310,7 @@ export default function Analysis() {
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
   const [showFaceAnalysis, setShowFaceAnalysis] = useState(false); // Toggle state
   const [showMDCodes, setShowMDCodes] = useState(false); // Toggle state for MD Codes
+  const [showMAPPrecision, setShowMAPPrecision] = useState(false); // Toggle state for MAP Precision
   const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
   const [expressionResult, setExpressionResult] = useState<ExpressionAnalysis | null>(null);
 
@@ -679,7 +680,64 @@ export default function Analysis() {
           }
         }
 
-        // ─── 2c. Desenhar marcadores de IA (mantido do original) ───
+        // ─── 2c. Desenhar MAP Precision Overlay (se ativo e disponível) ───
+        if (showMAPPrecision && faceMeshResults && faceMeshResults.faceLandmarks && faceMeshResults.faceLandmarks.length > 0) {
+          const landmarks = faceMeshResults.faceLandmarks[0];
+          const cw = canvas.width;
+          const ch = canvas.height;
+
+          const glabela = [10, 151, 9, 8, 168, 6].filter(i => i < landmarks.length);
+          const periocularLeft = [33, 161, 160, 159, 158, 157, 133].filter(i => i < landmarks.length);
+          const periocularRight = [263, 388, 387, 386, 385, 384, 362].filter(i => i < landmarks.length);
+          const malarLeft = [116, 117, 118, 119, 120, 121].filter(i => i < landmarks.length);
+          const malarRight = [345, 346, 347, 348, 349, 350].filter(i => i < landmarks.length);
+
+          const drawMAPPath = (indices: number[], color: string, lineWidth: number) => {
+            if (indices.length === 0) return;
+            ctx.save();
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.globalAlpha = 0.8;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 10;
+
+            indices.forEach((idx, i) => {
+              const x = landmarks[idx].x * cw;
+              const y = landmarks[idx].y * ch;
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Draw Points
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+            indices.forEach(idx => {
+              const x = landmarks[idx].x * cw;
+              const y = landmarks[idx].y * ch;
+              ctx.beginPath();
+              ctx.arc(x, y, 4, 0, 2 * Math.PI);
+              ctx.fillStyle = "#ffffff";
+              ctx.fill();
+            });
+
+            ctx.restore();
+          };
+
+          // Upper Third / Fronte
+          drawMAPPath(glabela, "#8b5cf6", 4);
+          drawMAPPath(periocularLeft, "#3b82f6", 3.5);
+          drawMAPPath(periocularRight, "#3b82f6", 3.5);
+
+          // Middle Third / Malar
+          drawMAPPath(malarLeft, "#10b981", 4.5);
+          drawMAPPath(malarRight, "#10b981", 4.5);
+        }
+
+        // ─── 2d. Desenhar marcadores de IA (mantido do original) ───
         if (markers.length > 0) {
           markers.forEach((marker) => {
             const x = (marker.x / 100) * canvas.width;
@@ -1715,6 +1773,7 @@ export default function Analysis() {
                 setImage(imgData);
                 setShowFaceAnalysis(toggles.faceShape);
                 setShowMDCodes(toggles.mdCodes);
+                setShowMAPPrecision(toggles.mapPrecision || false);
                 setShowWebcam(false);
               }}
               onClose={() => setShowWebcam(false)}
