@@ -1,17 +1,18 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, RefreshCw, X, ScanFace, Info } from 'lucide-react';
+import { Camera, RefreshCw, X, ScanFace, Info, Activity } from 'lucide-react';
 import { mediaPipeService } from '@/services/MediaPipeService';
 import { toast } from 'sonner';
 import { FaceLandmarker, DrawingUtils } from '@mediapipe/tasks-vision';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import FaceMeshOverlay from './FaceMeshOverlay';
 import MDCodesOverlay from './MDCodesOverlay';
+import MAPPrecisionOverlay from './MAPPrecisionOverlay';
 import { evaluateFaceShape, type FaceShapeAnalysis } from '@/utils/faceGeometry';
 import { motion } from 'framer-motion';
 
 interface WebcamCaptureProps {
-    onCapture: (imageData: string, toggles: { faceShape: boolean, mdCodes: boolean }) => void;
+    onCapture: (imageData: string, toggles: { faceShape: boolean, mdCodes: boolean, mapPrecision?: boolean }) => void;
     onClose: () => void;
 }
 
@@ -26,6 +27,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
     // Evaluation States
     const [showFaceAnalysis, setShowFaceAnalysis] = useState(false);
     const [showMDCodes, setShowMDCodes] = useState(false);
+    const [showMAPPrecision, setShowMAPPrecision] = useState(false);
     const [faceMeshResults, setFaceMeshResults] = useState<any>(null);
     const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
     const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
@@ -136,7 +138,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                 }
 
                 // If no custom overlays are active, optionally draw basic wireframes
-                if (!showFaceAnalysis && !showMDCodes) {
+                if (!showFaceAnalysis && !showMDCodes && !showMAPPrecision) {
                     const drawingUtils = new DrawingUtils(ctx);
                     for (const landmarks of results.faceLandmarks) {
                         drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: "#C0C0C070", lineWidth: 1 });
@@ -152,7 +154,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
         }
 
         requestRef.current = requestAnimationFrame(predictWebcam);
-    }, [isCameraReady, showFaceAnalysis, showMDCodes]);
+    }, [isCameraReady, showFaceAnalysis, showMDCodes, showMAPPrecision]);
 
     // Start loop when ready
     useEffect(() => {
@@ -175,7 +177,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
 
             // Switch back to IMAGE mode before analyzing
             mediaPipeService.setRunningMode("IMAGE").then(() => {
-                onCapture(dataUrl, { faceShape: showFaceAnalysis, mdCodes: showMDCodes });
+                onCapture(dataUrl, { faceShape: showFaceAnalysis, mdCodes: showMDCodes, mapPrecision: showMAPPrecision });
             });
         }
     };
@@ -223,6 +225,13 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                                     )}
                                     {showMDCodes && (
                                         <MDCodesOverlay
+                                            landmarks={mirroredLandmarks as any}
+                                            width={videoDimensions.width}
+                                            height={videoDimensions.height}
+                                        />
+                                    )}
+                                    {showMAPPrecision && (
+                                        <MAPPrecisionOverlay
                                             landmarks={mirroredLandmarks as any}
                                             width={videoDimensions.width}
                                             height={videoDimensions.height}
@@ -297,7 +306,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                     <DropdownMenuTrigger asChild>
                         <Button
                             variant="default"
-                            className={`rounded-xl px-4 md:px-6 flex flex-col items-center justify-center gap-1.5 h-auto py-2.5 transition-all shadow-lg ${showFaceAnalysis || showMDCodes
+                            className={`rounded-xl px-4 md:px-6 flex flex-col items-center justify-center gap-1.5 h-auto py-2.5 transition-all shadow-lg ${showFaceAnalysis || showMDCodes || showMAPPrecision
                                 ? "bg-cyan-600 hover:bg-cyan-500 text-white border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]"
                                 : "bg-zinc-800/80 hover:bg-zinc-700 text-cyan-400 border border-cyan-500/50 backdrop-blur-md"
                                 }`}
@@ -328,6 +337,17 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                             <Info className="w-4 h-4 mr-2" />
                             <span>MD Codes</span>
                             {showMDCodes && (
+                                <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
+                            )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                            onClick={() => setShowMAPPrecision(!showMAPPrecision)}
+                            className="cursor-pointer text-white focus:bg-white/10"
+                        >
+                            <Activity className="w-4 h-4 mr-2" />
+                            <span>MAP Precision (Terços)</span>
+                            {showMAPPrecision && (
                                 <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
                             )}
                         </DropdownMenuItem>
