@@ -22,8 +22,8 @@ const getShapeStyle = (id: string, isSelected: boolean, defaultColor: string) =>
     let bgColor = defaultColor;
     let clipPath = 'none';
 
-    let w = isSelected ? 32 : 22;
-    let h = isSelected ? 32 : 22;
+    let w = isSelected ? 22 : 15;
+    let h = isSelected ? 22 : 15;
     let br = '50%';
 
     if (['F1', 'F2', 'F3'].includes(id)) {
@@ -31,15 +31,15 @@ const getShapeStyle = (id: string, isSelected: boolean, defaultColor: string) =>
         bgColor = '#ef4444'; // Red
         clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
         br = '0';
-        w = isSelected ? 34 : 25;
-        h = isSelected ? 30 : 23;
+        w = isSelected ? 24 : 18;
+        h = isSelected ? 21 : 16;
     } else if (['G1'].includes(id)) {
         shape = 'arrow-up';
         bgColor = '#ef4444'; // Red
         clipPath = 'polygon(50% 0%, 100% 35%, 75% 35%, 75% 100%, 25% 100%, 25% 35%, 0% 35%)';
         br = '0';
-        w = isSelected ? 28 : 22;
-        h = isSelected ? 34 : 26;
+        w = isSelected ? 20 : 15;
+        h = isSelected ? 24 : 18;
     } else if (['G2', 'O1', 'O2', 'O3', 'E1', 'E2', 'E3', 'T1', 'T2', 'Tt1', 'Tt2', 'Tt3', 'Ck2', 'Ck3', 'N1', 'N2', 'N3', 'N4', 'N5'].includes(id)) {
         shape = 'circle';
         bgColor = '#ef4444'; // Red
@@ -47,29 +47,29 @@ const getShapeStyle = (id: string, isSelected: boolean, defaultColor: string) =>
         shape = 'rect-vertical';
         bgColor = '#3b82f6'; // Blue
         br = '4px';
-        w = isSelected ? 24 : 16;
-        h = isSelected ? 36 : 26;
+        w = isSelected ? 17 : 11;
+        h = isSelected ? 25 : 18;
     } else if (['Ck4'].includes(id)) {
         shape = 'triangle';
         bgColor = '#3b82f6'; // Blue
         clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
         br = '0';
-        w = isSelected ? 34 : 25;
-        h = isSelected ? 30 : 23;
+        w = isSelected ? 24 : 18;
+        h = isSelected ? 21 : 16;
     } else if (['NL1'].includes(id)) {
         shape = 'arrow-down';
         bgColor = '#ef4444'; // Red
         clipPath = 'polygon(25% 0%, 75% 0%, 75% 65%, 100% 65%, 50% 100%, 0% 65%, 25% 65%)';
         br = '0';
-        w = isSelected ? 28 : 22;
-        h = isSelected ? 34 : 26;
+        w = isSelected ? 20 : 15;
+        h = isSelected ? 24 : 18;
     } else if (['NL2', 'NL3'].includes(id)) {
         shape = 'arrow-down';
         bgColor = '#3b82f6'; // Blue
         clipPath = 'polygon(25% 0%, 75% 0%, 75% 65%, 100% 65%, 50% 100%, 0% 65%, 25% 65%)';
         br = '0';
-        w = isSelected ? 28 : 22;
-        h = isSelected ? 34 : 26;
+        w = isSelected ? 20 : 15;
+        h = isSelected ? 24 : 18;
     }
 
     return { shape, bgColor, clipPath, w, h, br };
@@ -148,7 +148,7 @@ export default function MDCodesOverlay({
                                 >
                                     {/* Alert Ring */}
                                     {codeItem.clinical.alert && (
-                                        <div className="absolute inset-0 rounded-full border border-red-500 animate-ping opacity-75 md:w-8 md:h-8 w-6 h-6 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none" />
+                                        <div className="absolute inset-0 rounded-full border border-red-500 animate-ping opacity-75 md:w-6 md:h-6 w-5 h-5 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 pointer-events-none" />
                                     )}
 
                                     {/* Core Marker */}
@@ -168,7 +168,7 @@ export default function MDCodesOverlay({
                                         }}
                                     >
                                         <span
-                                            className="text-[8px] sm:text-[9px] font-bold text-white pointer-events-none tracking-tighter"
+                                            className="text-[6px] sm:text-[7px] font-bold text-white pointer-events-none tracking-tighter"
                                             style={{
                                                 transform: getShapeStyle(codeItem.id, isSelected, color).shape === 'triangle' ? 'translateY(15%)'
                                                     : getShapeStyle(codeItem.id, isSelected, color).shape === 'arrow-up' ? 'translateY(15%)'
