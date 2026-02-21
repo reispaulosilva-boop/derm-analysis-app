@@ -1,7 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Camera, RefreshCw, X, SwitchCamera } from 'lucide-react';
+import { Camera, RefreshCw, X, SwitchCamera, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLiveBlendshapes } from '@/hooks/useLiveBlendshapes';
+import DynamicDiscordOverlay from './DynamicDiscordOverlay';
 
 interface WebcamCaptureProps {
     onCapture: (imageData: string, toggles: { faceShape: boolean, mdCodes: boolean, mapPrecision?: boolean }) => void;
@@ -13,6 +15,30 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [isCameraReady, setIsCameraReady] = useState(false);
     const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+    const [showDynamicDiscord, setShowDynamicDiscord] = useState(false);
+    const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
+
+    // Live blendshape analysis hook
+    const { landmarks, discordResult } = useLiveBlendshapes(
+        videoRef,
+        showDynamicDiscord && isCameraReady
+    );
+
+    // Track video element dimensions for overlay sizing
+    useEffect(() => {
+        const updateDimensions = () => {
+            if (videoRef.current) {
+                setVideoDimensions({
+                    width: videoRef.current.clientWidth,
+                    height: videoRef.current.clientHeight,
+                });
+            }
+        };
+
+        updateDimensions();
+        window.addEventListener('resize', updateDimensions);
+        return () => window.removeEventListener('resize', updateDimensions);
+    }, [isCameraReady]);
 
     // Initialize Camera stably without any AI loops
     useEffect(() => {
@@ -116,6 +142,18 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                     muted
                 />
 
+                {/* Dynamic Discord Overlay — rendered on top of the live video */}
+                {showDynamicDiscord && discordResult && landmarks && videoDimensions.width > 0 && (
+                    <div className={`absolute inset-0 z-30 pointer-events-none ${facingMode === "user" ? "-scale-x-100" : ""}`}>
+                        <DynamicDiscordOverlay
+                            result={discordResult}
+                            landmarks={landmarks}
+                            width={videoDimensions.width}
+                            height={videoDimensions.height}
+                        />
+                    </div>
+                )}
+
                 {/* Loading State Spinner Base */}
                 {!isCameraReady && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white z-50 transition-opacity">
@@ -128,8 +166,8 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
             {/* Navigation Bar Limpa e Direta */}
             <div className="h-28 bg-black/90 backdrop-blur-lg flex items-center justify-between px-6 pb-safe shadow-[0_-15px_50px_rgba(0,0,0,0.8)] z-50 relative border-t border-white/5">
 
-                {/* Left Controls - Sair */}
-                <div className="flex z-10">
+                {/* Left Controls - Sair + Dynamic Discord */}
+                <div className="flex gap-2 z-10">
                     <Button
                         variant="ghost"
                         size="icon"
@@ -137,6 +175,19 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                         onClick={onClose}
                     >
                         <X className="w-7 h-7" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`rounded-full w-12 h-12 transition-all ${showDynamicDiscord
+                                ? 'text-cyan-400 bg-cyan-500/20 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                                : 'text-white/60 hover:bg-white/20'
+                            }`}
+                        onClick={() => setShowDynamicDiscord(prev => !prev)}
+                        disabled={!isCameraReady}
+                        title="Discórdia Dinâmica"
+                    >
+                        <Activity className="w-6 h-6" />
                     </Button>
                 </div>
 

@@ -3,7 +3,9 @@ import { NormalizedLandmark } from '@mediapipe/tasks-vision';
 import {
     calculateIOD,
     calculateDistanceSymmetry,
-    MORPHOMETRICS_LANDMARKS
+    MORPHOMETRICS_LANDMARKS,
+    FACIAL_EVAL_LANDMARKS,
+    extractFacialMetrics
 } from '@/utils/morphometrics';
 import { motion } from 'framer-motion';
 
@@ -19,6 +21,11 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
     // Helper to map normalized coordinates to Canvas/SVG pixels
     const toX = (normX: number) => normX * width;
     const toY = (normY: number) => normY * height;
+
+    const px = (idx: number) => ({
+        x: toX(landmarks[idx].x),
+        y: toY(landmarks[idx].y)
+    });
 
     // 1. Extrair os Landmarks Base (Distância Intercantal Externa - Lateral a Lateral)
     const rightEye = landmarks[MORPHOMETRICS_LANDMARKS.EYE_OUTER_RIGHT]; // 263
@@ -41,6 +48,17 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
 
     // Cálculo vetorial basal mandibular (simples altura relativa)
     const jawlineCenter = landmarks[MORPHOMETRICS_LANDMARKS.MENTON];
+
+    // --- Novas Métricas Aprofundadas ---
+    const metrics = extractFacialMetrics(landmarks, width, height);
+
+    // Coordenadas para Terços Faciais
+    const ptForehead = px(FACIAL_EVAL_LANDMARKS.forehead_top);
+    const ptGlabela = px(FACIAL_EVAL_LANDMARKS.glabela);
+    const ptNasalBase = px(FACIAL_EVAL_LANDMARKS.nasal_base);
+    const ptChin = px(FACIAL_EVAL_LANDMARKS.chin);
+    const ptJawLeft = px(FACIAL_EVAL_LANDMARKS.jaw_left);
+    const ptJawRight = px(FACIAL_EVAL_LANDMARKS.jaw_right);
 
     return (
         <svg
@@ -69,6 +87,46 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
                 opacity="0.6"
             />
 
+            {/* Marcadores de Terços Faciais */}
+            {[ptForehead, ptGlabela, ptNasalBase].map((pt, i) => (
+                <line
+                    key={`third-line-${i}`}
+                    x1={pt.x - 30}
+                    y1={pt.y}
+                    x2={ptJawLeft.x + 30}
+                    y2={pt.y}
+                    stroke="#ffffff"
+                    strokeWidth="1"
+                    strokeDasharray="4 4"
+                    opacity="0.5"
+                />
+            ))}
+            {[ptForehead, ptGlabela, ptNasalBase, ptChin].map((pt, i) => (
+                <circle key={`third-pt-${i}`} cx={pt.x} cy={pt.y} r="3" fill="#ff5050" />
+            ))}
+            <text x={ptGlabela.x + 10} y={(ptForehead.y + ptGlabela.y) / 2} fill="#ffffff" fontSize="10" opacity="0.8">
+                Terço Sup. ({metrics.third_upper_pct}%)
+            </text>
+            <text x={ptGlabela.x + 10} y={(ptGlabela.y + ptNasalBase.y) / 2} fill="#ffffff" fontSize="10" opacity="0.8">
+                Terço Méd. ({metrics.third_middle_pct}%)
+            </text>
+            <text x={ptNasalBase.x + 10} y={(ptNasalBase.y + ptChin.y) / 2} fill="#ffffff" fontSize="10" opacity="0.8">
+                Terço Inf. ({metrics.third_lower_pct}%)
+            </text>
+
+            {/* Marcador Largura Facial */}
+            <line
+                x1={ptJawLeft.x}
+                y1={ptJawLeft.y}
+                x2={ptJawRight.x}
+                y2={ptJawRight.y}
+                stroke="#ffc800"
+                strokeWidth="1.5"
+                opacity="0.7"
+            />
+            <circle cx={ptJawLeft.x} cy={ptJawLeft.y} r="3" fill="#ffc800" />
+            <circle cx={ptJawRight.x} cy={ptJawRight.y} r="3" fill="#ffc800" />
+
             {/* 2. Marcador IOD (Distância Interocular) Base */}
             <line
                 x1={toX(leftEye.x)}
@@ -81,10 +139,6 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
             />
             <circle cx={toX(leftEye.x)} cy={toY(leftEye.y)} r="4" fill="#ef4444" />
             <circle cx={toX(rightEye.x)} cy={toY(rightEye.y)} r="4" fill="#ef4444" />
-
-            <text x={toX(glabela.x) + 10} y={toY(leftEye.y) - 10} fill="#ef4444" fontSize="12" fontWeight="bold">
-                IOD REF
-            </text>
 
             {/* 3. Análise Vetorial de Assimetria: Comissuras Labiais (Linha de Marionete) */}
             <line
@@ -100,7 +154,6 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
             <circle cx={toX(mouthCornerRight.x)} cy={toY(mouthCornerRight.y)} r="5" fill="#f59e0b" />
 
             {/* Draw reflected symmetry point bounds to visualize the deviation */}
-            {/* Distância entre canto esquerdo e o plano sagital */}
             <line
                 x1={toX(glabela.x)}
                 y1={toY(mouthCornerRight.y)}
@@ -111,32 +164,36 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
                 opacity="0.5"
             />
 
-            {/* 4. Tracking Jawline (Mento Inferior gravitacional) */}
-            <circle cx={toX(jawlineCenter.x)} cy={toY(jawlineCenter.y)} r="6" fill="#ec4899" filter="url(#neonGlowMorph)" />
-            <path
-                d={`M ${toX(landmarks[150].x)} ${toY(landmarks[150].y)} 
-                   Q ${toX(jawlineCenter.x)} ${toY(jawlineCenter.y) + 20} 
-                   ${toX(landmarks[379].x)} ${toY(landmarks[379].y)}`}
-                fill="none"
-                stroke="#ec4899"
-                strokeWidth="3"
-                strokeDasharray="6 6"
-                opacity="0.8"
-            />
+            {/* HUD Data Box adaptado para exibir as novas métricas */}
+            <g transform={`translate(${width - 240}, 20)`}>
+                <rect width="220" height="230" rx="8" fill="rgba(10,15,30,0.85)" stroke="#10b981" strokeWidth="1" />
+                <text x="15" y="25" fill="#10b981" fontSize="12" fontWeight="bold" letterSpacing="1">ANÁLISE ESPACIAL</text>
 
-            {/* Render HUD Data Box explicitly on the SVG space */}
-            <g transform={`translate(${width - 220}, ${height * 0.4})`}>
-                <rect width="200" height="110" rx="8" fill="rgba(0,0,0,0.7)" stroke="#10b981" strokeWidth="1" />
-                <text x="15" y="25" fill="#10b981" fontSize="12" fontWeight="bold" letterSpacing="1">MÉTRICAS ESPACIAIS</text>
+                <text x="15" y="50" fill="#a1a1aa" fontSize="11">Índice Facial (H/W):</text>
+                <text x="160" y="50" fill={Math.abs(metrics.facial_index - 1.3) < 0.1 ? "#10b981" : "#ef4444"} fontSize="11" fontWeight="bold">{metrics.facial_index}</text>
 
-                <text x="15" y="45" fill="#a1a1aa" fontSize="11">Norma IOD:</text>
-                <text x="150" y="45" fill="#ef4444" fontSize="11" fontWeight="bold">{(iod).toFixed(3)}</text>
+                <text x="15" y="70" fill="#a1a1aa" fontSize="11">Simetria Ocular:</text>
+                <text x="160" y="70" fill={metrics.eye_symmetry_pct < 5 ? "#10b981" : "#f59e0b"} fontSize="11" fontWeight="bold">{metrics.eye_symmetry_pct}%</text>
 
-                <text x="15" y="65" fill="#a1a1aa" fontSize="11">Assimetria G. (C):</text>
-                <text x="150" y="65" fill="#f59e0b" fontSize="11" fontWeight="bold">{(mouthSymmetryDeviation).toFixed(4)}</text>
+                <text x="15" y="90" fill="#a1a1aa" fontSize="11">Quinto Central:</text>
+                <text x="160" y="90" fill={Math.abs(metrics.fifth_3_pct - 20) < 2 ? "#10b981" : "#3b82f6"} fontSize="11" fontWeight="bold">{metrics.fifth_3_pct}%</text>
 
-                <text x="15" y="85" fill="#a1a1aa" fontSize="11">Índice Distorção:</text>
-                <text x="150" y="85" fill="#3b82f6" fontSize="11" fontWeight="bold">{(symmetryIndex).toFixed(3)}</text>
+                <text x="15" y="110" fill="#a1a1aa" fontSize="11">Índice Nasal (W/H):</text>
+                <text x="160" y="110" fill={Math.abs(metrics.nasal_index - 0.67) < 0.1 ? "#10b981" : "#f59e0b"} fontSize="11" fontWeight="bold">{metrics.nasal_index}</text>
+
+                <text x="15" y="130" fill="#a1a1aa" fontSize="11">Lábio (Sup/Inf):</text>
+                <text x="160" y="130" fill={Math.abs(metrics.upper_lower_lip_ratio - 0.5) < 0.1 ? "#10b981" : "#3b82f6"} fontSize="11" fontWeight="bold">{metrics.upper_lower_lip_ratio}</text>
+
+                <text x="15" y="150" fill="#a1a1aa" fontSize="11">Assimetria Global:</text>
+                <text x="160" y="150" fill={metrics.global_asymmetry_px < 10 ? "#10b981" : "#ef4444"} fontSize="11" fontWeight="bold">{metrics.global_asymmetry_px}px</text>
+
+                <path d="M 15 165 L 205 165" stroke="#3f3f46" strokeWidth="1" strokeDasharray="2 2" />
+
+                <text x="15" y="185" fill="#a1a1aa" fontSize="11">Assimetria M. (C):</text>
+                <text x="160" y="185" fill="#f59e0b" fontSize="11" fontWeight="bold">{(mouthSymmetryDeviation).toFixed(4)}</text>
+
+                <text x="15" y="205" fill="#a1a1aa" fontSize="11">Índice Distorção:</text>
+                <text x="160" y="205" fill="#3b82f6" fontSize="11" fontWeight="bold">{(symmetryIndex).toFixed(3)}</text>
             </g>
         </svg>
     );
