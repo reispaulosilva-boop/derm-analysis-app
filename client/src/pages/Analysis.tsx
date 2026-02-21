@@ -52,6 +52,7 @@ import { aiAnalysisService, type AIAnalysisResult } from "@/services/aiAnalysisS
 import { useFaceMesh } from "@/hooks/useFaceMesh";
 import FaceMeshOverlay, { FACE_OVAL_INDICES, solveCatmullRom } from "@/components/analysis/FaceMeshOverlay";
 import MDCodesOverlay from "@/components/analysis/MDCodesOverlay";
+import MorphometricsOverlay from "@/components/analysis/MorphometricsOverlay";
 import WebcamCapture from "@/components/analysis/WebcamCapture";
 import { evaluateFaceShape, LANDMARKS, type FaceShapeAnalysis } from "@/utils/faceGeometry";
 import { analyzeExpression, type ExpressionAnalysis } from "@/utils/expressionAnalysis";
@@ -311,6 +312,7 @@ export default function Analysis() {
   const [showFaceAnalysis, setShowFaceAnalysis] = useState(false); // Toggle state
   const [showMDCodes, setShowMDCodes] = useState(false); // Toggle state for MD Codes
   const [showMAPPrecision, setShowMAPPrecision] = useState(false); // Toggle state for MAP Precision
+  const [showMorphometrics, setShowMorphometrics] = useState(false); // Toggle state for Morphometrics
   const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
   const [expressionResult, setExpressionResult] = useState<ExpressionAnalysis | null>(null);
 
@@ -737,7 +739,73 @@ export default function Analysis() {
           drawMAPPath(malarRight, "#10b981", 4.5);
         }
 
-        // ─── 2d. Desenhar marcadores de IA (mantido do original) ───
+        // ─── 2d. Desenhar Morfometria (se ativo e disponível) ───
+        if (showMorphometrics && faceMeshResults && faceMeshResults.faceLandmarks && faceMeshResults.faceLandmarks.length > 0) {
+          const landmarks = faceMeshResults.faceLandmarks[0];
+          const cw = canvas.width;
+          const ch = canvas.height;
+          const toX = (idx: number) => landmarks[idx].x * cw;
+          const toY = (idx: number) => landmarks[idx].y * ch;
+
+          // Eixo Sagital Mediano
+          ctx.save();
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(16, 185, 129, 0.6)"; // #10b981 opacidade 60%
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([8, 8]);
+          ctx.moveTo(toX(10), 0);
+          ctx.lineTo(toX(10), ch);
+          ctx.stroke();
+
+          // Marcador IOD (Distância Biocanthal Externa / Lateral-a-Lateral)
+          ctx.beginPath();
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([]);
+          ctx.shadowColor = "#ef4444";
+          ctx.shadowBlur = 6;
+          ctx.moveTo(toX(33), toY(33)); // 33 = Canto Lateral Esquerdo
+          ctx.lineTo(toX(263), toY(263)); // 263 = Canto Lateral Direito
+          ctx.stroke();
+
+          // Pontos IOD
+          ctx.beginPath(); ctx.arc(toX(33), toY(33), 4, 0, 2 * Math.PI); ctx.fillStyle = "#ef4444"; ctx.fill();
+          ctx.beginPath(); ctx.arc(toX(263), toY(263), 4, 0, 2 * Math.PI); ctx.fillStyle = "#ef4444"; ctx.fill();
+
+          // Comissuras Labiais (Assimetria)
+          ctx.beginPath();
+          ctx.strokeStyle = "#f59e0b";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.shadowBlur = 0;
+          ctx.moveTo(toX(78), toY(78)); // 78 = MOUTH_CORNER_LEFT
+          ctx.lineTo(toX(308), toY(308)); // 308 = MOUTH_CORNER_RIGHT
+          ctx.stroke();
+          ctx.beginPath(); ctx.arc(toX(78), toY(78), 5, 0, 2 * Math.PI); ctx.fillStyle = "#f59e0b"; ctx.fill();
+          ctx.beginPath(); ctx.arc(toX(308), toY(308), 5, 0, 2 * Math.PI); ctx.fillStyle = "#f59e0b"; ctx.fill();
+
+          // Linha da boca até eixo
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(59, 130, 246, 0.5)";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([]);
+          ctx.moveTo(toX(10), toY(308));
+          ctx.lineTo(toX(308), toY(308));
+          ctx.stroke();
+
+          // Jawline / Mento
+          ctx.beginPath(); ctx.arc(toX(152), toY(152), 6, 0, 2 * Math.PI); ctx.fillStyle = "#ec4899"; ctx.fill();
+          ctx.beginPath();
+          ctx.strokeStyle = "rgba(236, 72, 153, 0.8)";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([6, 6]);
+          ctx.moveTo(toX(150), toY(150));
+          ctx.quadraticCurveTo(toX(152), toY(152) + 20, toX(379), toY(379));
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // ─── 2e. Desenhar marcadores de IA (mantido do original) ───
         if (markers.length > 0) {
           markers.forEach((marker) => {
             const x = (marker.x / 100) * canvas.width;
@@ -1296,6 +1364,15 @@ export default function Analysis() {
                 />
               )}
 
+              {/* Morphometrics Visualizer */}
+              {showMorphometrics && faceMeshResults?.faceLandmarks && imgDimensions.width > 0 && (
+                <MorphometricsOverlay
+                  landmarks={faceMeshResults.faceLandmarks[0]}
+                  width={imgDimensions.width}
+                  height={imgDimensions.height}
+                />
+              )}
+
               {/* AI Disclaimer Banner */}
               <AnimatePresence>
                 {aiDisclaimer && (
@@ -1679,6 +1756,22 @@ export default function Analysis() {
                           <ScanFace className="w-4 h-4 mr-2" />
                           <span>MD Codes</span>
                           {showMDCodes && (
+                            <span className="ml-auto text-xs font-mono text-cyan-500">
+                              (Ativo)
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const newState = !showMorphometrics;
+                            setShowMorphometrics(newState);
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <ScanFace className="w-4 h-4 mr-2" />
+                          <span>Morfometria G. (Whitepaper)</span>
+                          {showMorphometrics && (
                             <span className="ml-auto text-xs font-mono text-cyan-500">
                               (Ativo)
                             </span>

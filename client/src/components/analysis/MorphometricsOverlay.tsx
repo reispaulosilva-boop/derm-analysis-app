@@ -20,9 +20,9 @@ export default function MorphometricsOverlay({ landmarks, width, height }: Morph
     const toX = (normX: number) => normX * width;
     const toY = (normY: number) => normY * height;
 
-    // 1. Extrair os Landmarks Base
-    const rightEye = landmarks[MORPHOMETRICS_LANDMARKS.EYE_INNER_RIGHT[0]]; // 362
-    const leftEye = landmarks[MORPHOMETRICS_LANDMARKS.EYE_INNER_LEFT[0]];   // 33
+    // 1. Extrair os Landmarks Base (Distância Intercantal Externa - Lateral a Lateral)
+    const rightEye = landmarks[MORPHOMETRICS_LANDMARKS.EYE_OUTER_RIGHT]; // 263
+    const leftEye = landmarks[MORPHOMETRICS_LANDMARKS.EYE_OUTER_LEFT];   // 33
 
     // Glabela ou ponta do nariz para eixo de reflexão Sagital X
     const glabela = landmarks[10];

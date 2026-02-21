@@ -6,8 +6,10 @@ import { NormalizedLandmark } from '@mediapipe/tasks-vision';
 // ============================================================================
 export const MORPHOMETRICS_LANDMARKS = {
     // Pálpebras e Contorno Ocular (Encurtamento da fenda palpebral, aferição da ptose via MRD1/MRD2 e frouxidão do tecido ocular)
-    EYE_INNER_LEFT: [33, 133],
-    EYE_INNER_RIGHT: [362, 263],
+    EYE_OUTER_LEFT: 33,   // Canto Lateral Esquerdo
+    EYE_INNER_LEFT: 133,  // Canto Medial Esquerdo
+    EYE_INNER_RIGHT: 362, // Canto Medial Direito
+    EYE_OUTER_RIGHT: 263, // Canto Lateral Direito
     EYE_CENTERS: [157, 159, 145, 386, 374],
 
     // Linha Mandibular Inferior / Jawline (Avaliação da formação de "Jowls", flacidez submandibular e abertura do ângulo gonial)
