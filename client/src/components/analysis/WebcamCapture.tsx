@@ -640,116 +640,123 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                 )}
             </div>
 
-            <div className="h-24 bg-black/80 flex items-center justify-between px-6 md:px-8 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-50">
-                <div className="flex gap-2">
+            <div className="h-24 bg-black/80 flex items-center justify-between px-4 md:px-8 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-50 relative">
+                {/* Left Controls */}
+                <div className="flex gap-2 z-10">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-white hover:bg-white/20 rounded-full w-12 h-12"
+                        className="text-white hover:bg-white/20 rounded-full w-10 h-10 md:w-12 md:h-12"
                         onClick={onClose}
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-5 h-5 md:w-6 md:h-6" />
                     </Button>
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-white hover:bg-white/20 rounded-full w-12 h-12"
+                        className="text-white hover:bg-white/20 rounded-full w-10 h-10 md:w-12 md:h-12"
                         onClick={() => setFacingMode(prev => prev === "user" ? "environment" : "user")}
                     >
-                        <SwitchCamera className="w-6 h-6" />
+                        <SwitchCamera className="w-5 h-5 md:w-6 md:h-6" />
                     </Button>
                 </div>
 
-                <Button
-                    size="lg"
-                    className="rounded-full w-16 h-16 border-4 border-white bg-transparent hover:bg-white/20 p-1 mx-2 shrink-0 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
-                    onClick={captureToCanvas}
-                    disabled={!isCameraReady}
-                >
-                    <div className="w-full h-full bg-white rounded-full" />
-                </Button>
+                {/* Center Capture Button */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                    <Button
+                        size="lg"
+                        className="rounded-full w-16 h-16 border-4 border-white bg-transparent hover:bg-white/20 p-1 shrink-0 transition-transform active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                        onClick={captureToCanvas}
+                        disabled={!isCameraReady}
+                    >
+                        <div className="w-full h-full bg-white rounded-full" />
+                    </Button>
+                </div>
 
-                {/* Avaliação em Tempo Real Dropdown */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="default"
-                            className={`rounded-xl px-4 md:px-6 flex flex-col items-center justify-center gap-1.5 h-auto py-2.5 transition-all shadow-lg ${showFaceAnalysis || showMDCodes || showMAPPrecision
-                                ? "bg-cyan-600 hover:bg-cyan-500 text-white border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]"
-                                : "bg-zinc-800/80 hover:bg-zinc-700 text-cyan-400 border border-cyan-500/50 backdrop-blur-md"
-                                }`}
-                        >
-                            <ScanFace className="w-6 h-6" />
-                            <span className="text-[10px] md:text-xs uppercase font-bold tracking-wider">Avaliação em Tempo Real</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 mb-2 border-white/10 bg-black/80 backdrop-blur-xl">
-                        <div className="px-2 py-1.5 text-[10px] text-white/50 uppercase font-bold tracking-widest mb-1">
-                            Avaliação em Tempo Real
-                        </div>
-                        <DropdownMenuItem
-                            onClick={() => setShowFaceAnalysis(!showFaceAnalysis)}
-                            className="cursor-pointer text-white focus:bg-white/10"
-                        >
-                            <ScanFace className="w-4 h-4 mr-2" />
-                            <span>Forma Facial</span>
-                            {showFaceAnalysis && (
-                                <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
-                            )}
-                        </DropdownMenuItem>
+                {/* Right Controls */}
+                <div className="flex gap-2 z-10">
+                    {/* Avaliação em Tempo Real Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="default"
+                                className={`rounded-xl px-3 md:px-6 flex flex-col items-center justify-center gap-1 h-auto py-2 transition-all shadow-lg ${showFaceAnalysis || showMDCodes || showMAPPrecision
+                                    ? "bg-cyan-600 hover:bg-cyan-500 text-white border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]"
+                                    : "bg-zinc-800/80 hover:bg-zinc-700 text-cyan-400 border border-cyan-500/50 backdrop-blur-md"
+                                    }`}
+                            >
+                                <ScanFace className="w-5 h-5 md:w-6 md:h-6" />
+                                <span className="text-[9px] md:text-xs uppercase font-bold tracking-wider">Análises</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 mb-2 border-white/10 bg-black/80 backdrop-blur-xl">
+                            <div className="px-2 py-1.5 text-[10px] text-white/50 uppercase font-bold tracking-widest mb-1">
+                                Avaliação em Tempo Real
+                            </div>
+                            <DropdownMenuItem
+                                onClick={() => setShowFaceAnalysis(!showFaceAnalysis)}
+                                className="cursor-pointer text-white focus:bg-white/10"
+                            >
+                                <ScanFace className="w-4 h-4 mr-2" />
+                                <span>Forma Facial</span>
+                                {showFaceAnalysis && (
+                                    <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
+                                )}
+                            </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                            onClick={() => setShowMDCodes(!showMDCodes)}
-                            className="cursor-pointer text-white focus:bg-white/10"
-                        >
-                            <Info className="w-4 h-4 mr-2" />
-                            <span>MD Codes</span>
-                            {showMDCodes && (
-                                <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
-                            )}
-                        </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => setShowMDCodes(!showMDCodes)}
+                                className="cursor-pointer text-white focus:bg-white/10"
+                            >
+                                <Info className="w-4 h-4 mr-2" />
+                                <span>MD Codes</span>
+                                {showMDCodes && (
+                                    <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
+                                )}
+                            </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                            onClick={() => setShowMAPPrecision(!showMAPPrecision)}
-                            className="cursor-pointer text-white focus:bg-white/10"
-                        >
-                            <Activity className="w-4 h-4 mr-2" />
-                            <span>MAP Precision (Terços)</span>
-                            {showMAPPrecision && (
-                                <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
-                            )}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                            <DropdownMenuItem
+                                onClick={() => setShowMAPPrecision(!showMAPPrecision)}
+                                className="cursor-pointer text-white focus:bg-white/10"
+                            >
+                                <Activity className="w-4 h-4 mr-2" />
+                                <span>MAP Precision (Terços)</span>
+                                {showMAPPrecision && (
+                                    <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
+                                )}
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
-                {/* Download Dropdown */}
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="outline"
-                            className="rounded-xl px-4 flex flex-col items-center justify-center gap-1.5 h-auto py-2.5 transition-all shadow-lg bg-zinc-800/80 hover:bg-zinc-700 text-white border border-white/20 backdrop-blur-md"
-                            disabled={isDownloading || !isCameraReady}
-                            title="Salvar Foto"
-                        >
-                            {isDownloading ? (
-                                <Loader2 className="w-6 h-6 animate-spin" />
-                            ) : (
-                                <Download className="w-6 h-6" />
-                            )}
-                            <span className="text-[10px] md:text-xs uppercase font-bold tracking-wider">Salvar</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-auto mb-2 border-white/10 bg-black/80 backdrop-blur-xl">
-                        <DropdownMenuItem onClick={() => handleDownloadCapture(false)} className="cursor-pointer text-white focus:bg-white/10">
-                            <ImageIcon className="w-4 h-4 mr-2" />
-                            Salvar Original
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownloadCapture(true)} className="cursor-pointer text-white focus:bg-white/10">
-                            <ScanFace className="w-4 h-4 mr-2" />
-                            Salvar com Análise
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    {/* Download Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="rounded-xl px-3 flex flex-col items-center justify-center gap-1 h-auto py-2 transition-all shadow-lg bg-zinc-800/80 hover:bg-zinc-700 text-white border border-white/20 backdrop-blur-md"
+                                disabled={isDownloading || !isCameraReady}
+                                title="Salvar Foto"
+                            >
+                                {isDownloading ? (
+                                    <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" />
+                                ) : (
+                                    <Download className="w-5 h-5 md:w-6 md:h-6" />
+                                )}
+                                <span className="text-[9px] md:text-xs uppercase font-bold tracking-wider">Salvar</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-auto mb-2 border-white/10 bg-black/80 backdrop-blur-xl">
+                            <DropdownMenuItem onClick={() => handleDownloadCapture(false)} className="cursor-pointer text-white focus:bg-white/10">
+                                <ImageIcon className="w-4 h-4 mr-2" />
+                                Salvar Original
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDownloadCapture(true)} className="cursor-pointer text-white focus:bg-white/10">
+                                <ScanFace className="w-4 h-4 mr-2" />
+                                Salvar com Análise
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
         </div>
     );
