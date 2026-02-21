@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import FaceMeshOverlay from './FaceMeshOverlay';
 import MDCodesOverlay from './MDCodesOverlay';
 import MAPPrecisionOverlay from './MAPPrecisionOverlay';
+import MorphometricsOverlay from './MorphometricsOverlay';
 import { evaluateFaceShape, type FaceShapeAnalysis, LANDMARKS } from '@/utils/faceGeometry';
 import { motion } from 'framer-motion';
 import { saveCanvasImage } from '@/utils/imageHelpers';
@@ -32,6 +33,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
     const [showFaceAnalysis, setShowFaceAnalysis] = useState(false);
     const [showMDCodes, setShowMDCodes] = useState(false);
     const [showMAPPrecision, setShowMAPPrecision] = useState(false);
+    const [showMorphometrics, setShowMorphometrics] = useState(false);
     const [faceMeshResults, setFaceMeshResults] = useState<any>(null);
     const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
     const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
@@ -151,7 +153,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                 }
 
                 // If no custom overlays are active, optionally draw basic wireframes
-                if (!showFaceAnalysis && !showMDCodes && !showMAPPrecision) {
+                if (!showFaceAnalysis && !showMDCodes && !showMAPPrecision && !showMorphometrics) {
                     const drawingUtils = new DrawingUtils(ctx);
                     for (const landmarks of results.faceLandmarks) {
                         drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: "#C0C0C070", lineWidth: 1 });
@@ -167,7 +169,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
         }
 
         requestRef.current = requestAnimationFrame(predictWebcam);
-    }, [isCameraReady, showFaceAnalysis, showMDCodes, showMAPPrecision]);
+    }, [isCameraReady, showFaceAnalysis, showMDCodes, showMAPPrecision, showMorphometrics]);
 
     // Start loop when ready
     useEffect(() => {
@@ -595,6 +597,13 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                                             height={videoDimensions.height}
                                         />
                                     )}
+                                    {showMorphometrics && (
+                                        <MorphometricsOverlay
+                                            landmarks={processedLandmarks as any}
+                                            width={videoDimensions.width}
+                                            height={videoDimensions.height}
+                                        />
+                                    )}
                                 </>
                             );
                         })()}
@@ -681,7 +690,7 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="default"
-                                    className={`rounded-xl px-3 md:px-6 flex flex-col items-center justify-center gap-1 h-auto py-2 transition-all shadow-lg ${showFaceAnalysis || showMDCodes || showMAPPrecision
+                                    className={`rounded-xl px-3 md:px-6 flex flex-col items-center justify-center gap-1 h-auto py-2 transition-all shadow-lg ${showFaceAnalysis || showMDCodes || showMAPPrecision || showMorphometrics
                                         ? "bg-cyan-600 hover:bg-cyan-500 text-white border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.6)]"
                                         : "bg-zinc-800/80 hover:bg-zinc-700 text-cyan-400 border border-cyan-500/50 backdrop-blur-md"
                                         }`}
@@ -723,6 +732,17 @@ export default function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps
                                     <Activity className="w-4 h-4 mr-2" />
                                     <span>MAP Precision (Terços)</span>
                                     {showMAPPrecision && (
+                                        <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
+                                    )}
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                    onClick={() => setShowMorphometrics(!showMorphometrics)}
+                                    className="cursor-pointer text-white focus:bg-white/10"
+                                >
+                                    <ScanFace className="w-4 h-4 mr-2" />
+                                    <span>Morfometria G. (Whitepaper)</span>
+                                    {showMorphometrics && (
                                         <span className="ml-auto text-xs font-mono text-cyan-500">(Ativo)</span>
                                     )}
                                 </DropdownMenuItem>
