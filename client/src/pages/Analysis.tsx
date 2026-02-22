@@ -26,6 +26,7 @@ import {
   Download,
   ScanFace,
   Save,
+  AlertTriangle,
   FileText,
   Sparkles,
   Loader2,
@@ -53,6 +54,7 @@ import { useFaceMesh } from "@/hooks/useFaceMesh";
 import FaceMeshOverlay, { FACE_OVAL_INDICES, solveCatmullRom } from "@/components/analysis/FaceMeshOverlay";
 import MDCodesOverlay from "@/components/analysis/MDCodesOverlay";
 import MorphometricsOverlay from "@/components/analysis/MorphometricsOverlay";
+import NeurovascularOverlay from "@/components/analysis/NeurovascularOverlay";
 import WebcamCapture from "@/components/analysis/WebcamCapture";
 import { evaluateFaceShape, LANDMARKS, type FaceShapeAnalysis } from "@/utils/faceGeometry";
 import { analyzeExpression, type ExpressionAnalysis } from "@/utils/expressionAnalysis";
@@ -313,6 +315,7 @@ export default function Analysis() {
   const [showMDCodes, setShowMDCodes] = useState(false); // Toggle state for MD Codes
   const [showMAPPrecision, setShowMAPPrecision] = useState(false); // Toggle state for MAP Precision
   const [showMorphometrics, setShowMorphometrics] = useState(false); // Toggle state for Morphometrics
+  const [showNeurovascular, setShowNeurovascular] = useState(false); // Toggle state for Neurovascular Risk Map
   const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
   const [expressionResult, setExpressionResult] = useState<ExpressionAnalysis | null>(null);
 
@@ -1373,6 +1376,15 @@ export default function Analysis() {
                 />
               )}
 
+              {/* Neurovascular Risk Map */}
+              {showNeurovascular && faceMeshResults?.faceLandmarks && imgDimensions.width > 0 && (
+                <NeurovascularOverlay
+                  landmarks={faceMeshResults.faceLandmarks[0]}
+                  width={imgDimensions.width}
+                  height={imgDimensions.height}
+                />
+              )}
+
               {/* AI Disclaimer Banner */}
               <AnimatePresence>
                 {aiDisclaimer && (
@@ -1773,6 +1785,27 @@ export default function Analysis() {
                           <span>Morfometria G. (Whitepaper)</span>
                           {showMorphometrics && (
                             <span className="ml-auto text-xs font-mono text-cyan-500">
+                              (Ativo)
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const newState = !showNeurovascular;
+                            setShowNeurovascular(newState);
+                            if (newState) {
+                              toast.warning("Mapa Neurovascular Ativado", {
+                                description: "Zonas de perigo arterial e neural em vermelho. NÃO substitui atlas anatômico."
+                              });
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <AlertTriangle className="w-4 h-4 mr-2 text-red-400" />
+                          <span>Risco Neurovascular</span>
+                          {showNeurovascular && (
+                            <span className="ml-auto text-xs font-mono text-red-400">
                               (Ativo)
                             </span>
                           )}
