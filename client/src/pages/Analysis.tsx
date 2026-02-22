@@ -28,6 +28,7 @@ import {
   Save,
   AlertTriangle,
   Shield,
+  Ruler,
   FileText,
   Sparkles,
   Loader2,
@@ -57,11 +58,13 @@ import MDCodesOverlay from "@/components/analysis/MDCodesOverlay";
 import MorphometricsOverlay from "@/components/analysis/MorphometricsOverlay";
 import NeurovascularOverlay from "@/components/analysis/NeurovascularOverlay";
 import FASScorePanel from "@/components/analysis/FASScorePanel";
+import MetricPanel from "@/components/analysis/MetricPanel";
 import WebcamCapture from "@/components/analysis/WebcamCapture";
 import { evaluateFaceShape, LANDMARKS, type FaceShapeAnalysis } from "@/utils/faceGeometry";
 import { analyzeExpression, type ExpressionAnalysis } from "@/utils/expressionAnalysis";
 import { extractFacialMetrics, type FacialMetrics } from "@/utils/morphometrics";
 import { computeFASScore, type FASResult } from "@/utils/fasScoring";
+import { analyzeProcrustesMetric, type ProcrustesResult } from "@/utils/procrustesMetric";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -321,6 +324,7 @@ export default function Analysis() {
   const [showMorphometrics, setShowMorphometrics] = useState(false); // Toggle state for Morphometrics
   const [showNeurovascular, setShowNeurovascular] = useState(false); // Toggle state for Neurovascular Risk Map
   const [showFAS, setShowFAS] = useState(false); // Toggle state for FAS Scoring
+  const [showMetric, setShowMetric] = useState(false); // Toggle for 3D Metric measurements
   const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
   const [expressionResult, setExpressionResult] = useState<ExpressionAnalysis | null>(null);
   const [facialMetrics, setFacialMetrics] = useState<FacialMetrics | null>(null);
@@ -334,6 +338,13 @@ export default function Analysis() {
       discordResult: null, // Dynamic discord not available in static mode
     });
   }, [showFAS, faceShape, facialMetrics]);
+
+  // Compute Procrustes metric measurements
+  const procrustesResult: ProcrustesResult | null = useMemo(() => {
+    if (!showMetric) return null;
+    if (!faceMeshResults?.faceLandmarks || faceMeshResults.faceLandmarks.length === 0) return null;
+    return analyzeProcrustesMetric(faceMeshResults.faceLandmarks[0]);
+  }, [showMetric, faceMeshResults]);
 
   const handleImageLoad = useCallback(async () => {
     if (imageRef.current) {
@@ -1419,6 +1430,14 @@ export default function Analysis() {
                 />
               )}
 
+              {/* 3D Metric Panel */}
+              {showMetric && procrustesResult && (
+                <MetricPanel
+                  result={procrustesResult}
+                  onClose={() => setShowMetric(false)}
+                />
+              )}
+
               {/* AI Disclaimer Banner */}
               <AnimatePresence>
                 {aiDisclaimer && (
@@ -1840,6 +1859,27 @@ export default function Analysis() {
                           <span>Risco Neurovascular</span>
                           {showNeurovascular && (
                             <span className="ml-auto text-xs font-mono text-red-400">
+                              (Ativo)
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const newState = !showMetric;
+                            setShowMetric(newState);
+                            if (newState) {
+                              toast.info("Medidas 3D Ativadas", {
+                                description: "Conversão Procrustes: landmarks → milímetros (IPD = 63mm)."
+                              });
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Ruler className="w-4 h-4 mr-2 text-emerald-400" />
+                          <span>Medidas 3D (mm)</span>
+                          {showMetric && (
+                            <span className="ml-auto text-xs font-mono text-emerald-400">
                               (Ativo)
                             </span>
                           )}
