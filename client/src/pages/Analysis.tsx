@@ -5,7 +5,7 @@
  *           zoom/pan, fullscreen presentation mode, overlay heatmap
  * Optimized for iPhone 15 Pro touch + Apple TV display
  */
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,7 @@ import {
   ScanFace,
   Save,
   AlertTriangle,
+  Shield,
   FileText,
   Sparkles,
   Loader2,
@@ -55,9 +56,12 @@ import FaceMeshOverlay, { FACE_OVAL_INDICES, solveCatmullRom } from "@/component
 import MDCodesOverlay from "@/components/analysis/MDCodesOverlay";
 import MorphometricsOverlay from "@/components/analysis/MorphometricsOverlay";
 import NeurovascularOverlay from "@/components/analysis/NeurovascularOverlay";
+import FASScorePanel from "@/components/analysis/FASScorePanel";
 import WebcamCapture from "@/components/analysis/WebcamCapture";
 import { evaluateFaceShape, LANDMARKS, type FaceShapeAnalysis } from "@/utils/faceGeometry";
 import { analyzeExpression, type ExpressionAnalysis } from "@/utils/expressionAnalysis";
+import { extractFacialMetrics, type FacialMetrics } from "@/utils/morphometrics";
+import { computeFASScore, type FASResult } from "@/utils/fasScoring";
 
 // ─── Analysis Parameters ───
 const ANALYSIS_PARAMS = [
@@ -316,8 +320,20 @@ export default function Analysis() {
   const [showMAPPrecision, setShowMAPPrecision] = useState(false); // Toggle state for MAP Precision
   const [showMorphometrics, setShowMorphometrics] = useState(false); // Toggle state for Morphometrics
   const [showNeurovascular, setShowNeurovascular] = useState(false); // Toggle state for Neurovascular Risk Map
+  const [showFAS, setShowFAS] = useState(false); // Toggle state for FAS Scoring
   const [faceShape, setFaceShape] = useState<FaceShapeAnalysis | null>(null);
   const [expressionResult, setExpressionResult] = useState<ExpressionAnalysis | null>(null);
+  const [facialMetrics, setFacialMetrics] = useState<FacialMetrics | null>(null);
+
+  // Compute FAS Score whenever underlying data changes
+  const fasResult: FASResult | null = useMemo(() => {
+    if (!showFAS) return null;
+    return computeFASScore({
+      faceShape,
+      facialMetrics,
+      discordResult: null, // Dynamic discord not available in static mode
+    });
+  }, [showFAS, faceShape, facialMetrics]);
 
   const handleImageLoad = useCallback(async () => {
     if (imageRef.current) {
@@ -335,6 +351,16 @@ export default function Analysis() {
     if (faceMeshResults && faceMeshResults.faceLandmarks && faceMeshResults.faceLandmarks.length > 0) {
       const analysis = evaluateFaceShape(faceMeshResults.faceLandmarks[0]);
       setFaceShape(analysis);
+
+      // Compute facial metrics for FAS scoring
+      if (imgDimensions.width > 0 && imgDimensions.height > 0) {
+        const metrics = extractFacialMetrics(
+          faceMeshResults.faceLandmarks[0],
+          imgDimensions.width,
+          imgDimensions.height
+        );
+        setFacialMetrics(metrics);
+      }
 
       // Expression Analysis
       if (faceMeshResults.faceBlendshapes && faceMeshResults.faceBlendshapes.length > 0) {
@@ -1385,6 +1411,14 @@ export default function Analysis() {
                 />
               )}
 
+              {/* FAS Score Panel */}
+              {showFAS && fasResult && (
+                <FASScorePanel
+                  result={fasResult}
+                  onClose={() => setShowFAS(false)}
+                />
+              )}
+
               {/* AI Disclaimer Banner */}
               <AnimatePresence>
                 {aiDisclaimer && (
@@ -1806,6 +1840,27 @@ export default function Analysis() {
                           <span>Risco Neurovascular</span>
                           {showNeurovascular && (
                             <span className="ml-auto text-xs font-mono text-red-400">
+                              (Ativo)
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const newState = !showFAS;
+                            setShowFAS(newState);
+                            if (newState) {
+                              toast.info("FAS Score Ativado", {
+                                description: "Score quantitativo dos 5 domínios da escala Galderma."
+                              });
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Shield className="w-4 h-4 mr-2 text-cyan-400" />
+                          <span>FAS Score (5 Domínios)</span>
+                          {showFAS && (
+                            <span className="ml-auto text-xs font-mono text-cyan-500">
                               (Ativo)
                             </span>
                           )}
